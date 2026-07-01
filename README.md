@@ -24,26 +24,42 @@ Site statique (HTML/CSS/JS pur, sans build) hébergeant des outils interactifs p
 ## Structure du projet
 
 ```
-index.html              → page d'accueil, liste tous les outils par catégorie
-assets/style.css         → styles partagés par toutes les pages
+index.html               → page d'accueil, 5 catégories d'outils
+assets/style.css          → styles partagés (identité Art Déco)
 outils/
-  qcm.html                → générateur de QCM (modifiable)
-  calculatrice.html        → calculatrice scientifique
-documents/                → (à créer) déposez-y vos PDF de cours
+  qcm.html                 → QCM de vocabulaire
+  vocab-data.js            → listes de vocabulaire utilisées par le QCM
+  calculatrice.html        → calculatrice scientifique (non reliée à l'accueil actuellement)
+documents/                 → (à créer) déposez-y vos PDF de cours
 ```
+
+## Les 5 catégories de la page d'accueil
+
+La page d'accueil est organisée en 5 catégories fixes :
+- **Travail de la langue** (contient le QCM de vocabulaire)
+- **Méthode de l'essai**
+- **Actualités**
+- **Civilisation**
+- **Traduction**
+
+Les catégories vides affichent actuellement "Aucun outil pour l'instant — à venir."
+Dès que vous ajoutez un outil, remplacez ce message par une carte (voir ci-dessous).
 
 ## Ajouter un nouvel outil
 
-1. Dupliquez `outils/qcm.html` ou `outils/calculatrice.html` comme point de départ.
-2. Renommez le fichier (ex. `outils/simulateur-physique.html`).
+1. Dupliquez `outils/qcm.html` comme point de départ (ou repartez d'une page vierge).
+2. Renommez le fichier (ex. `outils/essai-plan.html`).
 3. Adaptez le contenu et le script JavaScript à votre outil.
-4. Ajoutez une carte vers ce nouvel outil dans `index.html`, dans la section appropriée :
+4. Dans `index.html`, repérez la catégorie concernée et remplacez le `<p class="empty-note">...</p>`
+   (ou ajoutez à côté d'une carte existante dans `<div class="card-grid">`) par :
    ```html
-   <a class="card" href="outils/simulateur-physique.html">
-     <span class="icon">⚙️</span>
-     <h3>Nom de l'outil</h3>
-     <p>Description courte de l'outil.</p>
-   </a>
+   <div class="card-grid">
+     <a class="card" href="outils/essai-plan.html">
+       <span class="icon"><span>✒️</span></span>
+       <h3>Nom de l'outil</h3>
+       <p>Description courte de l'outil.</p>
+     </a>
+   </div>
    ```
 
 ## Modifier ou ajouter une liste de vocabulaire (QCM)
