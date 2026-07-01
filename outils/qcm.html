@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Générateur de QCM</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <a href="../index.html" class="brand">📚 Outils pédagogiques</a>
+</header>
+
+<main>
+  <a class="back-link" href="../index.html">&larr; Retour à l'accueil</a>
+  <h1 class="page-title">Générateur de QCM</h1>
+  <p class="page-subtitle">Modifiez la liste de questions dans le code (variable <code>QUESTIONS</code>) pour créer votre propre quiz.</p>
+
+  <div class="tool-shell">
+    <div id="quiz-area"></div>
+    <div id="result-area" style="display:none; margin-top:1rem;">
+      <h2 id="score-line"></h2>
+      <button id="restart-btn" class="secondary">Recommencer</button>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">Outil pédagogique — QCM</footer>
+
+<script>
+// ---- Modifiez ce tableau pour créer votre propre quiz ----
+const QUESTIONS = [
+  {
+    q: "Quelle est la capitale de la France ?",
+    choices: ["Lyon", "Paris", "Marseille", "Toulouse"],
+    correct: 1
+  },
+  {
+    q: "Combien font 7 × 8 ?",
+    choices: ["54", "56", "58", "64"],
+    correct: 1
+  },
+  {
+    q: "Quel gaz les plantes absorbent-elles principalement pour la photosynthèse ?",
+    choices: ["Oxygène", "Azote", "Dioxyde de carbone", "Hydrogène"],
+    correct: 2
+  }
+];
+// ------------------------------------------------------------
+
+let current = 0;
+let score = 0;
+let answered = false;
+
+const quizArea = document.getElementById('quiz-area');
+const resultArea = document.getElementById('result-area');
+const scoreLine = document.getElementById('score-line');
+const restartBtn = document.getElementById('restart-btn');
+
+function renderQuestion() {
+  answered = false;
+  const item = QUESTIONS[current];
+  quizArea.innerHTML = `
+    <p style="color:var(--text-muted); margin-bottom:0.25rem;">Question ${current + 1} / ${QUESTIONS.length}</p>
+    <h3 style="margin-top:0;">${item.q}</h3>
+    <div id="choices" style="display:flex; flex-direction:column; gap:0.5rem; margin:1rem 0;"></div>
+    <div id="feedback" style="min-height:1.5rem; font-weight:600;"></div>
+    <button id="next-btn" style="margin-top:0.75rem;" disabled>Suivant</button>
+  `;
+  const choicesDiv = document.getElementById('choices');
+  item.choices.forEach((choice, i) => {
+    const btn = document.createElement('button');
+    btn.textContent = choice;
+    btn.className = 'secondary';
+    btn.style.textAlign = 'left';
+    btn.addEventListener('click', () => selectAnswer(i, btn));
+    choicesDiv.appendChild(btn);
+  });
+  document.getElementById('next-btn').addEventListener('click', nextQuestion);
+}
+
+function selectAnswer(i, btn) {
+  if (answered) return;
+  answered = true;
+  const item = QUESTIONS[current];
+  const feedback = document.getElementById('feedback');
+  const allButtons = document.querySelectorAll('#choices button');
+  allButtons.forEach(b => b.disabled = true);
+
+  if (i === item.correct) {
+    score++;
+    btn.style.background = '#dff3ea';
+    btn.style.borderColor = '#2f6f5e';
+    feedback.textContent = 'Bonne réponse !';
+    feedback.style.color = 'var(--accent)';
+  } else {
+    btn.style.background = '#fbe4e4';
+    btn.style.borderColor = '#c94b4b';
+    feedback.textContent = 'Réponse incorrecte.';
+    feedback.style.color = '#c94b4b';
+    allButtons[item.correct].style.background = '#dff3ea';
+    allButtons[item.correct].style.borderColor = '#2f6f5e';
+  }
+  document.getElementById('next-btn').disabled = false;
+}
+
+function nextQuestion() {
+  current++;
+  if (current < QUESTIONS.length) {
+    renderQuestion();
+  } else {
+    showResult();
+  }
+}
+
+function showResult() {
+  quizArea.innerHTML = '';
+  resultArea.style.display = 'block';
+  scoreLine.textContent = `Score : ${score} / ${QUESTIONS.length}`;
+}
+
+restartBtn.addEventListener('click', () => {
+  current = 0;
+  score = 0;
+  resultArea.style.display = 'none';
+  renderQuestion();
+});
+
+renderQuestion();
+</script>
+
+</body>
+</html>

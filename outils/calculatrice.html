@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculatrice scientifique</title>
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  .calc { max-width: 340px; margin: 0 auto; }
+  .display {
+    background: #1c2230;
+    color: #fff;
+    font-size: 1.6rem;
+    text-align: right;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    word-break: break-all;
+    min-height: 2.2rem;
+  }
+  .keys {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+  }
+  .keys button {
+    background: #eef0f3;
+    color: var(--text);
+    padding: 0.75rem 0;
+    font-size: 1rem;
+    border-radius: 8px;
+  }
+  .keys button:hover { background: #dfe3e8; }
+  .keys button.op { background: var(--accent); color: #fff; }
+  .keys button.op:hover { background: var(--accent-dark); }
+  .keys button.wide { grid-column: span 2; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <a href="../index.html" class="brand">📚 Outils pédagogiques</a>
+</header>
+
+<main>
+  <a class="back-link" href="../index.html">&larr; Retour à l'accueil</a>
+  <h1 class="page-title">Calculatrice scientifique</h1>
+  <p class="page-subtitle">Opérations de base, puissances, racines et pourcentages.</p>
+
+  <div class="tool-shell">
+    <div class="calc">
+      <div class="display" id="display">0</div>
+      <div class="keys">
+        <button onclick="clearAll()">C</button>
+        <button onclick="backspace()">⌫</button>
+        <button onclick="inputOp('%')" class="op">%</button>
+        <button onclick="inputOp('/')" class="op">÷</button>
+
+        <button onclick="inputDigit('7')">7</button>
+        <button onclick="inputDigit('8')">8</button>
+        <button onclick="inputDigit('9')">9</button>
+        <button onclick="inputOp('*')" class="op">×</button>
+
+        <button onclick="inputDigit('4')">4</button>
+        <button onclick="inputDigit('5')">5</button>
+        <button onclick="inputDigit('6')">6</button>
+        <button onclick="inputOp('-')" class="op">−</button>
+
+        <button onclick="inputDigit('1')">1</button>
+        <button onclick="inputDigit('2')">2</button>
+        <button onclick="inputDigit('3')">3</button>
+        <button onclick="inputOp('+')" class="op">+</button>
+
+        <button onclick="inputDigit('0')" class="wide">0</button>
+        <button onclick="inputDigit('.')">.</button>
+        <button onclick="calculate()" class="op">=</button>
+
+        <button onclick="applyFn('sqrt')">√x</button>
+        <button onclick="applyFn('sq')">x²</button>
+        <button onclick="applyFn('inv')">1/x</button>
+        <button onclick="applyFn('neg')">±</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">Outil pédagogique — Calculatrice</footer>
+
+<script>
+let expression = '';
+const display = document.getElementById('display');
+
+function updateDisplay() {
+  display.textContent = expression === '' ? '0' : expression;
+}
+
+function inputDigit(d) {
+  expression += d;
+  updateDisplay();
+}
+
+function inputOp(op) {
+  if (expression === '') return;
+  const lastChar = expression.slice(-1);
+  if ('+-*/%'.includes(lastChar)) {
+    expression = expression.slice(0, -1) + op;
+  } else {
+    expression += op;
+  }
+  updateDisplay();
+}
+
+function clearAll() {
+  expression = '';
+  updateDisplay();
+}
+
+function backspace() {
+  expression = expression.slice(0, -1);
+  updateDisplay();
+}
+
+function applyFn(fn) {
+  if (expression === '') return;
+  try {
+    const value = evaluateExpression(expression);
+    let result;
+    switch (fn) {
+      case 'sqrt': result = Math.sqrt(value); break;
+      case 'sq': result = value * value; break;
+      case 'inv': result = 1 / value; break;
+      case 'neg': result = -value; break;
+    }
+    expression = trimNumber(result);
+    updateDisplay();
+  } catch (e) {
+    display.textContent = 'Erreur';
+    expression = '';
+  }
+}
+
+function evaluateExpression(expr) {
+  // Évaluation simple et sécurisée d'une expression arithmétique de base
+  if (!/^[0-9+\-*/%.]+$/.test(expr)) throw new Error('invalid');
+  // eslint-disable-next-line no-new-func
+  return Function('"use strict"; return (' + expr.replace(/%/g, '/100*') + ')')();
+}
+
+function trimNumber(n) {
+  return String(Math.round(n * 1e10) / 1e10);
+}
+
+function calculate() {
+  if (expression === '') return;
+  try {
+    const result = evaluateExpression(expression);
+    expression = trimNumber(result);
+    updateDisplay();
+  } catch (e) {
+    display.textContent = 'Erreur';
+    expression = '';
+  }
+}
+
+document.addEventListener('keydown', (e) => {
+  if (/[0-9.]/.test(e.key)) inputDigit(e.key);
+  else if (['+', '-', '*', '/'].includes(e.key)) inputOp(e.key);
+  else if (e.key === 'Enter' || e.key === '=') calculate();
+  else if (e.key === 'Backspace') backspace();
+  else if (e.key === 'Escape') clearAll();
+});
+</script>
+
+</body>
+</html>
