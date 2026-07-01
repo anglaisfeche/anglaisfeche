@@ -5,7 +5,7 @@ const CIVILISATION_CHAPTERS = [
     "title": "USA 1764-1776 : The Road to Independence",
     "period": "1764 - 1776",
     "cover": "images/road/01-statue-george.jpg",
-    "intro": "Comment l'attachement des colons americains a la liberte, confronte a l'autoritarisme britannique, a mene a la Declaration d'Independance de 1776.",
+    "intro": "Comment l'attachement des colons américains à la liberté, confronté à l'autoritarisme britannique, a mené à la Déclaration d'Indépendance de 1776.",
     "sections": [
       {
         "id": "objectives",
@@ -264,7 +264,7 @@ const CIVILISATION_CHAPTERS = [
     "title": "The US Constitution : The Supreme Law of the Land",
     "period": "1777 - aujourd'hui",
     "cover": "images/constitution/01-constitution-parchment.jpg",
-    "intro": "Comment les redacteurs de la Constitution americaine, traumatises par la tyrannie de George III mais aussi par la faiblesse du premier gouvernement federal, ont invente un systeme de pouvoirs limites et equilibres.",
+    "intro": "Comment les rédacteurs de la Constitution américaine, traumatisés par la tyrannie de George III mais aussi par la faiblesse du premier gouvernement fédéral, ont inventé un système de pouvoirs limités et équilibrés.",
     "sections": [
       {
         "id": "objectives",
@@ -497,9 +497,9 @@ const CIVILISATION_CHAPTERS = [
   {
     "id": "british-empire",
     "title": "The Empire on which the sun never sets",
-    "period": "18e - 20e siecle",
+    "period": "18e - 20e siècle",
     "cover": "images/empire/01-queen-victoria.jpg",
-    "intro": "Comment le Royaume-Uni a construit le plus vaste empire de l'Histoire, entre motivations economiques, militaires et ideologiques.",
+    "intro": "Comment le Royaume-Uni a construit le plus vaste empire de l'Histoire, entre motivations économiques, militaires et idéologiques.",
     "sections": [
       {
         "id": "objectives",
