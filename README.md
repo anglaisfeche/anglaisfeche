@@ -49,15 +49,13 @@ Si l'action ne se déclenche pas : vérifiez dans **Settings → Actions → Gen
 Ces trois outils sont entièrement basés sur des données statiques (fichiers `*-data.js`), sans IA ni backend :
 - **Grammaire** : chaque règle propose une phrase correcte et une phrase fautive, l'élève doit identifier la bonne.
 - **Collocations** : la phrase d'exemple est affichée avec le verbe masqué automatiquement (repérage par conjugaison approchée) ; l'élève choisit le bon verbe parmi plusieurs propositions.
-- **Mots de liaison** : l'élève réécrit librement une phrase avec le connecteur donné, puis compare avec un exemple de réécriture (auto-évaluation, pas de correction automatique).
+- **Mots de liaison** : l'élève reconstitue dans le bon ordre une phrase modèle utilisant le connecteur donné, en cliquant les mots d'une banque mélangée (correction automatique, mot par mot).
 
 Pour ajouter de nouvelles règles/collocations/connecteurs, copiez un bloc dans le fichier `*-data.js` correspondant : le format est documenté en commentaire en haut de chaque fichier.
 
 ## Reformulation de problématique (Méthode de l'essai)
 
-Fonctionne en auto-évaluation : l'élève reformule une question dans une zone de texte libre, puis peut afficher des propositions de reformulation pour comparer. Pour ajouter des problématiques, éditez `outils/reformulation-data.js`.
-
-**Note :** un vrai retour généré par IA sur la reformulation de l'élève (comme envisagé initialement) nécessiterait un service backend avec une clé API, ce qui n'est pas compatible avec un site 100% statique et gratuit sur GitHub Pages. Cette version utilise donc l'auto-évaluation par comparaison à des modèles. Si vous souhaitez ajouter un vrai retour IA plus tard, il faudra un petit backend (ex. Cloudflare Worker) qui appelle une API IA en gardant la clé secrète côté serveur — n'hésitez pas à demander de l'aide pour cette étape.
+Fonctionne en QCM : pour chaque question, l'élève choisit parmi 4 reformulations celle qui garde exactement le même sens que la question d'origine (avec un nouveau vocabulaire et une nouvelle structure) ; les 3 autres choix illustrent les erreurs classiques (reformulation trop proche de l'original, sens modifié, ou phrase qui n'est plus une question). Correction et explication immédiates. Pour ajouter des problématiques, éditez `outils/reformulation-data.js` (chaque entrée contient la question, les 4 choix, l'indice du bon choix et une explication).
 
 ## Prononciation — Shadowing
 
