@@ -29,6 +29,23 @@
   .filter-row { margin-bottom: 1.2rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
   .filter-row button { font-size: 0.72rem; padding: 0.45rem 0.8rem; }
   .filter-row button.active { background: var(--emerald); border-color: var(--emerald); color: #fff; }
+  .check-list { list-style: none; margin: 0 0 1rem; padding: 0; }
+  .check-list li {
+    padding: 0.45rem 0; font-size: 0.9rem; display: flex; align-items: flex-start; gap: 0.55rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .check-list li:last-child { border-bottom: none; }
+  .check-list li .icon { font-weight: 700; flex-shrink: 0; }
+  .check-list li.ok .icon { color: var(--emerald); }
+  .check-list li.ko .icon { color: var(--burgundy); }
+  .check-list li.ok { color: var(--ink); }
+  .check-list li.ko { color: var(--ink-soft); }
+  .check-results {
+    display: none; background: var(--paper); border: 1px solid var(--border);
+    padding: 0.9rem 1.1rem; margin-top: 1rem;
+  }
+  .check-results.show { display: block; }
+  .check-results .check-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 0.5rem; }
 </style>
 </head>
 <body>
@@ -46,9 +63,11 @@
     <div class="filter-row" id="filter-row"></div>
     <div id="exercise-area"></div>
     <div class="btn-row" style="margin-top:1rem;">
+      <button id="check-btn">Vérifier ma réponse</button>
       <button id="reveal-btn" class="secondary">Voir une proposition de réécriture</button>
-      <button id="next-btn">Phrase suivante</button>
+      <button id="next-btn" class="secondary">Phrase suivante</button>
     </div>
+    <div class="check-results" id="check-results"></div>
   </div>
 </main>
 
@@ -96,8 +115,48 @@ function renderExercise() {
     <textarea id="answer" placeholder="Réécrivez la ou les phrases en utilisant ${current.connector}..."></textarea>
     <div class="model-box" id="model-box"><strong>Exemple de réécriture :</strong><br>${current.model}</div>
   `;
+  document.getElementById('check-results').classList.remove('show');
 }
 
+// ------------------------------------------------------------
+// Vérifications automatiques (sans IA) : critères mécaniques
+// ------------------------------------------------------------
+function normalize(s) {
+  return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z\s]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function connectorIsUsed(answer, connector) {
+  const normAnswer = normalize(answer);
+  const normConnector = normalize(connector);
+  if (normAnswer.includes(normConnector)) return true;
+  const words = normConnector.split(' ').filter(w => w.length > 2);
+  if (words.length === 0) return false;
+  const found = words.filter(w => normAnswer.includes(w));
+  return found.length >= Math.ceil(words.length / 2);
+}
+
+function runChecks() {
+  const answer = document.getElementById('answer').value.trim();
+  const checks = [];
+  checks.push({ ok: answer.length > 0, label: "Vous avez écrit une réponse" });
+  const wordCount = answer.split(/\s+/).filter(Boolean).length;
+  checks.push({ ok: answer.length > 0 && wordCount >= 5, label: `Votre phrase contient au moins 5 mots (actuellement ${wordCount})` });
+  checks.push({ ok: answer.length > 0 && connectorIsUsed(answer, current.connector), label: `Vous avez utilisé le connecteur « ${current.connector} »` });
+  checks.push({ ok: /^[A-ZÀ-Ý]/.test(answer), label: "Votre phrase commence par une majuscule" });
+  checks.push({ ok: /[.!?]$/.test(answer), label: "Votre phrase se termine par une ponctuation finale (. ! ?)" });
+  return checks;
+}
+
+function renderChecks(checks) {
+  const box = document.getElementById('check-results');
+  box.innerHTML = `<p class="check-title">Vérifications automatiques (pas de correction du sens — comparez avec le modèle pour ça)</p>
+    <ul class="check-list">${checks.map(c => `<li class="${c.ok ? 'ok' : 'ko'}"><span class="icon">${c.ok ? '✓' : '✗'}</span><span>${c.label}</span></li>`).join('')}</ul>`;
+  box.classList.add('show');
+}
+
+document.getElementById('check-btn').addEventListener('click', () => {
+  renderChecks(runChecks());
+});
 document.getElementById('reveal-btn').addEventListener('click', () => {
   document.getElementById('model-box').classList.add('show');
 });
