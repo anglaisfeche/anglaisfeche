@@ -23,6 +23,12 @@ outils/
   prononciation.html + prononciation-data.js → shadowing (synthèse + reconnaissance vocale)
   reformulation.html + reformulation-data.js → reformulation de problématiques d'essai
   calculatrice.html              → calculatrice scientifique (non reliée à l'accueil)
+  civilisation/
+    lecture-data.js               → contenu des chapitres (texte, illustrations, questions de relance)
+    lecture.html                  → lecture dynamique : sommaire cliquable, zoom sur les images, questions intégrées
+    quiz-data.js                  → banque de questions de compréhension par chapitre
+    quiz.html                     → quiz de civilisation : sélection du chapitre puis série de questions
+    images/road, images/constitution, images/empire → illustrations extraites des PDF de référence
 actualites/
   index.html                     → affiche le fil d'actualité
   news.json                      → généré automatiquement (voir ci-dessous)
@@ -56,6 +62,15 @@ Fonctionne en auto-évaluation : l'élève reformule une question dans une zone 
 ## Prononciation — Shadowing
 
 Utilise les API natives du navigateur : `speechSynthesis` (voix de synthèse, pour écouter le modèle) et `SpeechRecognition` (reconnaissance vocale, pour comparer ce que l'élève a dit au mot ciblé). Fonctionne mieux sur Chrome/Edge ; certains navigateurs (Firefox, Safari) ne supportent pas la reconnaissance vocale — le site le signale et propose alors l'écoute seule. Pour ajouter des exercices, éditez `outils/prononciation-data.js`.
+
+## Civilisation — Lecture dynamique et Quiz
+
+Construits à partir de trois PDF de cours (Road to Independence, US Constitution, British Empire), sans IA ni backend :
+
+- **Lecture dynamique** (`outils/civilisation/lecture.html`) : l'élève choisit un chapitre, puis lit le texte avec un sommaire cliquable (navigation directe + barre de progression), des illustrations tirées du cours (cliquables pour zoomer), et des « questions de relance » à choix multiple insérées régulièrement dans le texte pour vérifier la compréhension en cours de lecture.
+- **Quiz de civilisation** (`outils/civilisation/quiz.html`) : l'élève choisit un chapitre puis répond à une série de 10 questions à choix multiple portant sur les enjeux du cours (10 questions par chapitre), avec correction et explication immédiates.
+
+Pour ajouter un nouveau chapitre : dupliquez un chapitre dans `outils/civilisation/lecture-data.js` (tableau `CIVILISATION_CHAPTERS`, avec ses sections et questions de relance) et dans `outils/civilisation/quiz-data.js` (tableau `CIVILISATION_QUIZ`), puis déposez les illustrations correspondantes dans `outils/civilisation/images/<nom-du-chapitre>/`.
 
 ## Ajouter un nouvel outil sur la page d'accueil
 
