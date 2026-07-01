@@ -3,8 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Générateur de QCM</title>
+<title>QCM de vocabulaire</title>
 <link rel="stylesheet" href="../assets/style.css">
+<style>
+  .list-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; }
+  .list-card {
+    background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 0.9rem 1rem; cursor: pointer; text-align: left; font-family: inherit;
+  }
+  .list-card:hover { border-color: var(--accent); }
+  .list-card h3 { margin: 0 0 0.2rem; font-size: 1rem; }
+  .list-card p { margin: 0; font-size: 0.82rem; color: var(--text-muted); }
+  .setup-row { display: flex; flex-wrap: wrap; gap: 1.5rem; margin: 1.25rem 0; }
+  .setup-row label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.3rem; }
+  .choices-grid { display: flex; flex-direction: column; gap: 0.5rem; margin: 1rem 0; }
+  .choices-grid button { text-align: left; }
+</style>
 </head>
 <body>
 
@@ -14,81 +28,193 @@
 
 <main>
   <a class="back-link" href="../index.html">&larr; Retour à l'accueil</a>
-  <h1 class="page-title">Générateur de QCM</h1>
-  <p class="page-subtitle">Modifiez la liste de questions dans le code (variable <code>QUESTIONS</code>) pour créer votre propre quiz.</p>
+  <h1 class="page-title">QCM de vocabulaire</h1>
+  <p class="page-subtitle" id="page-subtitle">Choisissez une liste pour commencer.</p>
 
   <div class="tool-shell">
-    <div id="quiz-area"></div>
-    <div id="result-area" style="display:none; margin-top:1rem;">
-      <h2 id="score-line"></h2>
-      <button id="restart-btn" class="secondary">Recommencer</button>
+    <!-- Écran 1 : choix de la liste -->
+    <div id="screen-select">
+      <div class="list-grid" id="list-grid"></div>
+    </div>
+
+    <!-- Écran 2 : réglages -->
+    <div id="screen-setup" style="display:none;">
+      <button class="secondary" id="change-list-btn" style="margin-bottom:1rem;">&larr; Changer de liste</button>
+      <h2 id="setup-title" style="margin-top:0;"></h2>
+      <div class="setup-row">
+        <div>
+          <label>Sens des questions</label>
+          <select id="direction-select">
+            <option value="en-fr">Anglais → Français</option>
+            <option value="fr-en">Français → Anglais</option>
+            <option value="mixed">Mixte</option>
+          </select>
+        </div>
+        <div>
+          <label>Nombre de questions</label>
+          <select id="count-select"></select>
+        </div>
+      </div>
+      <button id="start-quiz-btn">Commencer le quiz</button>
+    </div>
+
+    <!-- Écran 3 : quiz -->
+    <div id="screen-quiz" style="display:none;">
+      <div id="quiz-area"></div>
+      <div id="result-area" style="display:none; margin-top:1rem;">
+        <h2 id="score-line"></h2>
+        <div style="display:flex; gap:0.6rem;">
+          <button id="retry-btn" class="secondary">Refaire cette liste</button>
+          <button id="other-list-btn">Choisir une autre liste</button>
+        </div>
+      </div>
     </div>
   </div>
 </main>
 
-<footer class="site-footer">Outil pédagogique — QCM</footer>
+<footer class="site-footer">Outil pédagogique — QCM de vocabulaire</footer>
 
+<script src="vocab-data.js"></script>
 <script>
-// ---- Modifiez ce tableau pour créer votre propre quiz ----
-const QUESTIONS = [
-  {
-    q: "Quelle est la capitale de la France ?",
-    choices: ["Lyon", "Paris", "Marseille", "Toulouse"],
-    correct: 1
-  },
-  {
-    q: "Combien font 7 × 8 ?",
-    choices: ["54", "56", "58", "64"],
-    correct: 1
-  },
-  {
-    q: "Quel gaz les plantes absorbent-elles principalement pour la photosynthèse ?",
-    choices: ["Oxygène", "Azote", "Dioxyde de carbone", "Hydrogène"],
-    correct: 2
-  }
-];
 // ------------------------------------------------------------
-
+// État global
+// ------------------------------------------------------------
+let currentList = null;
+let questions = [];
 let current = 0;
 let score = 0;
 let answered = false;
 
+const screenSelect = document.getElementById('screen-select');
+const screenSetup = document.getElementById('screen-setup');
+const screenQuiz = document.getElementById('screen-quiz');
+const pageSubtitle = document.getElementById('page-subtitle');
+
+// ------------------------------------------------------------
+// Écran 1 : sélection de la liste
+// ------------------------------------------------------------
+function renderListSelection() {
+  screenSelect.style.display = 'block';
+  screenSetup.style.display = 'none';
+  screenQuiz.style.display = 'none';
+  pageSubtitle.textContent = 'Choisissez une liste de vocabulaire pour commencer.';
+
+  const grid = document.getElementById('list-grid');
+  grid.innerHTML = '';
+  VOCAB_LISTS.forEach(list => {
+    const card = document.createElement('button');
+    card.className = 'list-card';
+    card.innerHTML = `<h3>${list.title}</h3><p>${list.words.length} mots</p>`;
+    card.addEventListener('click', () => selectList(list));
+    grid.appendChild(card);
+  });
+}
+
+function selectList(list) {
+  currentList = list;
+  screenSelect.style.display = 'none';
+  screenSetup.style.display = 'block';
+  pageSubtitle.textContent = 'Choisissez le sens et le nombre de questions.';
+  document.getElementById('setup-title').textContent = list.title;
+
+  const countSelect = document.getElementById('count-select');
+  countSelect.innerHTML = '';
+  const options = [5, 10, 15, 20, list.words.length].filter((v, i, arr) => v <= list.words.length && arr.indexOf(v) === i);
+  options.forEach(n => {
+    const opt = document.createElement('option');
+    opt.value = n;
+    opt.textContent = n === list.words.length ? `${n} (toute la liste)` : n;
+    countSelect.appendChild(opt);
+  });
+  // valeur par défaut : 10 si possible, sinon max dispo
+  countSelect.value = options.includes(10) ? 10 : options[options.length - 1];
+}
+
+document.getElementById('change-list-btn').addEventListener('click', renderListSelection);
+document.getElementById('other-list-btn').addEventListener('click', renderListSelection);
+
+// ------------------------------------------------------------
+// Écran 2 → génération du quiz
+// ------------------------------------------------------------
+document.getElementById('start-quiz-btn').addEventListener('click', () => {
+  const direction = document.getElementById('direction-select').value;
+  const count = parseInt(document.getElementById('count-select').value, 10);
+  questions = buildQuestions(currentList, direction, count);
+  current = 0;
+  score = 0;
+  screenSetup.style.display = 'none';
+  screenQuiz.style.display = 'block';
+  pageSubtitle.textContent = currentList.title;
+  document.getElementById('result-area').style.display = 'none';
+  renderQuestion();
+});
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function buildQuestions(list, direction, count) {
+  const pool = shuffle(list.words).slice(0, count);
+  return pool.map(word => {
+    let dir = direction;
+    if (direction === 'mixed') dir = Math.random() < 0.5 ? 'en-fr' : 'fr-en';
+
+    const questionText = dir === 'en-fr' ? word.en : word.fr;
+    const correctAnswer = dir === 'en-fr' ? word.fr : word.en;
+
+    // distracteurs : 3 autres traductions de la même liste
+    const others = list.words.filter(w => w !== word);
+    const distractors = shuffle(others)
+      .slice(0, 3)
+      .map(w => (dir === 'en-fr' ? w.fr : w.en));
+
+    const choices = shuffle([correctAnswer, ...distractors]);
+    return { questionText, correctAnswer, choices };
+  });
+}
+
+// ------------------------------------------------------------
+// Écran 3 : déroulé du quiz
+// ------------------------------------------------------------
 const quizArea = document.getElementById('quiz-area');
 const resultArea = document.getElementById('result-area');
 const scoreLine = document.getElementById('score-line');
-const restartBtn = document.getElementById('restart-btn');
 
 function renderQuestion() {
   answered = false;
-  const item = QUESTIONS[current];
+  const item = questions[current];
   quizArea.innerHTML = `
-    <p style="color:var(--text-muted); margin-bottom:0.25rem;">Question ${current + 1} / ${QUESTIONS.length}</p>
-    <h3 style="margin-top:0;">${item.q}</h3>
-    <div id="choices" style="display:flex; flex-direction:column; gap:0.5rem; margin:1rem 0;"></div>
+    <p style="color:var(--text-muted); margin-bottom:0.25rem;">Question ${current + 1} / ${questions.length}</p>
+    <h3 style="margin-top:0;">${item.questionText}</h3>
+    <div id="choices" class="choices-grid"></div>
     <div id="feedback" style="min-height:1.5rem; font-weight:600;"></div>
     <button id="next-btn" style="margin-top:0.75rem;" disabled>Suivant</button>
   `;
   const choicesDiv = document.getElementById('choices');
-  item.choices.forEach((choice, i) => {
+  item.choices.forEach(choice => {
     const btn = document.createElement('button');
     btn.textContent = choice;
     btn.className = 'secondary';
-    btn.style.textAlign = 'left';
-    btn.addEventListener('click', () => selectAnswer(i, btn));
+    btn.addEventListener('click', () => selectAnswer(choice, btn));
     choicesDiv.appendChild(btn);
   });
   document.getElementById('next-btn').addEventListener('click', nextQuestion);
 }
 
-function selectAnswer(i, btn) {
+function selectAnswer(choice, btn) {
   if (answered) return;
   answered = true;
-  const item = QUESTIONS[current];
+  const item = questions[current];
   const feedback = document.getElementById('feedback');
   const allButtons = document.querySelectorAll('#choices button');
   allButtons.forEach(b => b.disabled = true);
 
-  if (i === item.correct) {
+  if (choice === item.correctAnswer) {
     score++;
     btn.style.background = '#dff3ea';
     btn.style.borderColor = '#2f6f5e';
@@ -97,17 +223,21 @@ function selectAnswer(i, btn) {
   } else {
     btn.style.background = '#fbe4e4';
     btn.style.borderColor = '#c94b4b';
-    feedback.textContent = 'Réponse incorrecte.';
+    feedback.textContent = `Incorrect. Réponse attendue : ${item.correctAnswer}`;
     feedback.style.color = '#c94b4b';
-    allButtons[item.correct].style.background = '#dff3ea';
-    allButtons[item.correct].style.borderColor = '#2f6f5e';
+    allButtons.forEach(b => {
+      if (b.textContent === item.correctAnswer) {
+        b.style.background = '#dff3ea';
+        b.style.borderColor = '#2f6f5e';
+      }
+    });
   }
   document.getElementById('next-btn').disabled = false;
 }
 
 function nextQuestion() {
   current++;
-  if (current < QUESTIONS.length) {
+  if (current < questions.length) {
     renderQuestion();
   } else {
     showResult();
@@ -117,17 +247,19 @@ function nextQuestion() {
 function showResult() {
   quizArea.innerHTML = '';
   resultArea.style.display = 'block';
-  scoreLine.textContent = `Score : ${score} / ${QUESTIONS.length}`;
+  scoreLine.textContent = `Score : ${score} / ${questions.length}`;
 }
 
-restartBtn.addEventListener('click', () => {
-  current = 0;
-  score = 0;
-  resultArea.style.display = 'none';
-  renderQuestion();
+document.getElementById('retry-btn').addEventListener('click', () => {
+  selectList(currentList);
+  screenSetup.style.display = 'block';
+  screenQuiz.style.display = 'none';
 });
 
-renderQuestion();
+// ------------------------------------------------------------
+// Démarrage
+// ------------------------------------------------------------
+renderListSelection();
 </script>
 
 </body>

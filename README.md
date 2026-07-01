@@ -46,19 +46,28 @@ documents/                → (à créer) déposez-y vos PDF de cours
    </a>
    ```
 
-## Modifier le générateur de QCM
+## Modifier ou ajouter une liste de vocabulaire (QCM)
 
-Ouvrez `outils/qcm.html` et modifiez le tableau `QUESTIONS` en haut du script :
+Le QCM (`outils/qcm.html`) pioche ses questions dans le fichier `outils/vocab-data.js`.
+L'élève choisit d'abord une liste, puis le sens (anglais → français, français → anglais,
+ou mixte) et le nombre de questions ; les mauvaises réponses (distracteurs) sont générées
+automatiquement à partir des autres mots de la même liste.
+
+Pour ajouter une nouvelle liste, ouvrez `outils/vocab-data.js` et ajoutez un bloc au tableau
+`VOCAB_LISTS` :
 ```js
-const QUESTIONS = [
-  {
-    q: "Votre question ?",
-    choices: ["Réponse A", "Réponse B", "Réponse C", "Réponse D"],
-    correct: 1 // index de la bonne réponse (0 = A, 1 = B, ...)
-  },
-  // ajoutez autant de questions que nécessaire
-];
+{
+  id: "identifiant-unique-sans-accent",
+  title: "Titre affiché aux élèves",
+  words: [
+    { en: "English word", fr: "Traduction française" },
+    { en: "Another word", fr: "Une autre traduction" },
+    // ajoutez autant de mots que nécessaire
+  ]
+}
 ```
+Aucune autre modification n'est nécessaire : la nouvelle liste apparaît automatiquement
+sur l'écran de sélection du QCM.
 
 ## Ajouter des documents (PDF)
 
