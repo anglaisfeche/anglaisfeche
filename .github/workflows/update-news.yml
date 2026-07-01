@@ -1,0 +1,33 @@
+name: Mettre à jour le fil d'actualité
+
+on:
+  schedule:
+    - cron: "5 6 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  update-news:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Installer rss-parser
+        run: npm install rss-parser@3
+
+      - name: Générer actualites/news.json
+        run: node scripts/fetch-news.mjs
+
+      - name: Commit et push si changement
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add actualites/news.json
+          git diff --cached --quiet || git commit -m "Mise à jour automatique du fil d'actualité"
+          git push
