@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lecture dynamique — Civilisation</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  /* ---------- Sélecteur de chapitre ---------- */
+  .chapter-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.1rem; }
+  .chapter-card {
+    background: var(--paper-alt); border: 1px solid var(--gold);
+    box-shadow: 0 0 0 4px var(--paper), 0 0 0 5px var(--border);
+    margin: 4px; padding: 0; cursor: pointer; text-align: left; font-family: inherit; overflow: hidden;
+  }
+  .chapter-card:hover { box-shadow: 0 0 0 4px var(--paper), 0 0 0 5px var(--gold); }
+  .chapter-card img { width: 100%; height: 140px; object-fit: cover; display: block; border-bottom: 1px solid var(--gold); }
+  .chapter-card .body { padding: 1rem 1.1rem 1.2rem; }
+  .chapter-card .period { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gold); margin-bottom: 0.35rem; }
+  .chapter-card h3 { margin: 0 0 0.4rem; font-size: 1.02rem; font-family: 'Cinzel', serif; }
+  .chapter-card p { margin: 0; font-size: 0.85rem; color: var(--ink-soft); }
+
+  /* ---------- Écran de lecture ---------- */
+  .reading-layout { display: grid; grid-template-columns: 230px 1fr; gap: 2rem; align-items: start; }
+  @media (max-width: 780px) { .reading-layout { grid-template-columns: 1fr; } }
+
+  .toc-panel {
+    position: sticky; top: 1rem; background: var(--paper);
+    border: 1px solid var(--border); padding: 1rem 1rem 1.1rem; max-height: 82vh; overflow-y: auto;
+  }
+  .toc-panel h4 {
+    font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted);
+    margin: 0 0 0.7rem;
+  }
+  .toc-progress-bar { height: 4px; background: var(--border); margin-bottom: 1rem; position: relative; }
+  .toc-progress-bar .fill { height: 100%; background: var(--emerald); width: 0%; transition: width 0.2s ease; }
+  .toc-list { list-style: none; margin: 0; padding: 0; }
+  .toc-list li { margin-bottom: 0.15rem; }
+  .toc-list button {
+    all: unset; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;
+    font-size: 0.82rem; padding: 0.32rem 0.3rem; color: var(--ink-soft); line-height: 1.3;
+  }
+  .toc-list button:hover { color: var(--emerald); }
+  .toc-list .dot { width: 7px; height: 7px; background: var(--border); transform: rotate(45deg); flex-shrink: 0; }
+  .toc-list li.done .dot { background: var(--emerald); }
+  .toc-list li.current button { color: var(--emerald); font-weight: 600; }
+  .toc-list li.current .dot { background: var(--gold); }
+  .toc-list li.checkpoint-item button { font-style: italic; }
+
+  .reading-column { min-width: 0; }
+  .chapter-head { margin-bottom: 1.6rem; }
+  .chapter-head .period { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold); }
+  .chapter-head h1 { margin: 0.25rem 0 0.5rem; }
+  .chapter-head .intro { color: var(--ink-soft); font-size: 0.95rem; }
+
+  section.reading-section { margin-bottom: 2.3rem; scroll-margin-top: 1rem; }
+  section.reading-section h2 {
+    font-size: 1.15rem; border-bottom: 2px solid var(--gold); padding-bottom: 0.35rem; margin-bottom: 0.9rem;
+  }
+  section.reading-section p { margin: 0 0 0.9rem; font-size: 0.98rem; }
+
+  .section-image { margin: 1rem 0 1.2rem; }
+  .section-image img {
+    width: 100%; max-height: 420px; object-fit: contain; background: var(--paper);
+    border: 1px solid var(--border); cursor: zoom-in; display: block;
+  }
+  .section-image figcaption { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.4rem; font-style: italic; }
+  .images-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 560px) { .images-row { grid-template-columns: 1fr; } }
+
+  /* ---------- Checkpoint ---------- */
+  .checkpoint {
+    background: var(--emerald-bg); border: 1px solid var(--emerald);
+    padding: 1.1rem 1.2rem 1.3rem; margin: 0 0 2.3rem; scroll-margin-top: 1rem;
+  }
+  .checkpoint .cp-label {
+    font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--emerald);
+    margin-bottom: 0.6rem; font-weight: 600;
+  }
+  .checkpoint .cp-question { font-family: 'Cinzel', serif; font-weight: 600; margin-bottom: 0.9rem; font-size: 1.02rem; }
+  .cp-choices { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.9rem; }
+  .cp-choices button {
+    all: unset; cursor: pointer; background: var(--paper); border: 1px solid var(--border);
+    padding: 0.6rem 0.85rem; font-size: 0.9rem; color: var(--ink);
+  }
+  .cp-choices button:hover { border-color: var(--gold); }
+  .cp-choices button.selected { border-color: var(--gold); background: var(--paper-alt); }
+  .cp-choices button.correct { border-color: var(--emerald); background: #d7ead9; }
+  .cp-choices button.incorrect { border-color: var(--burgundy); background: var(--burgundy-bg); }
+  .cp-choices button:disabled { cursor: default; }
+  .cp-explanation {
+    display: none; background: var(--paper); border-left: 3px solid var(--gold);
+    padding: 0.7rem 0.9rem; font-size: 0.88rem; margin-top: 0.6rem;
+  }
+  .cp-explanation.show { display: block; }
+
+  /* ---------- Lightbox ---------- */
+  .lightbox {
+    display: none; position: fixed; inset: 0; background: rgba(20,18,15,0.92);
+    z-index: 999; align-items: center; justify-content: center; padding: 2rem; flex-direction: column;
+  }
+  .lightbox.show { display: flex; }
+  .lightbox img { max-width: 92vw; max-height: 78vh; object-fit: contain; border: 2px solid var(--gold); }
+  .lightbox figcaption { color: var(--paper); font-size: 0.9rem; margin-top: 1rem; max-width: 70vw; text-align: center; }
+  .lightbox .close-btn {
+    position: absolute; top: 1.2rem; right: 1.5rem; background: transparent; border: 1px solid var(--paper);
+    color: var(--paper);
+  }
+
+  .end-note { text-align: center; padding: 1.5rem 0 0.5rem; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <a href="../../index.html" class="brand">✦ Outils pédagogiques</a>
+</header>
+
+<main>
+  <a class="back-link" href="../../index.html">&larr; Retour à l'accueil</a>
+
+  <div id="screen-select">
+    <h1 class="page-title">Lecture dynamique — Civilisation</h1>
+    <p class="page-subtitle">Choisissez un chapitre : sommaire cliquable, illustrations à zoomer, et questions de relance pour vérifier votre compréhension au fil de la lecture.</p>
+    <div class="chapter-grid" id="chapter-grid"></div>
+  </div>
+
+  <div id="screen-reading" style="display:none;">
+    <button class="secondary" id="change-chapter-btn" style="margin-bottom:1.2rem;">&larr; Changer de chapitre</button>
+    <div class="reading-layout">
+      <nav class="toc-panel">
+        <h4>Sommaire</h4>
+        <div class="toc-progress-bar"><div class="fill" id="toc-fill"></div></div>
+        <ul class="toc-list" id="toc-list"></ul>
+      </nav>
+      <div class="reading-column">
+        <div class="chapter-head" id="chapter-head"></div>
+        <div id="reading-content"></div>
+        <div class="end-note">
+          <p class="page-subtitle">Fin du chapitre.</p>
+          <button class="secondary" id="back-to-top-btn">&larr; Choisir un autre chapitre</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">Outil pédagogique — Lecture dynamique de civilisation</footer>
+
+<div class="lightbox" id="lightbox">
+  <button class="close-btn secondary" id="lightbox-close">Fermer ✕</button>
+  <img id="lightbox-img" src="" alt="">
+  <figcaption id="lightbox-caption"></figcaption>
+</div>
+
+<script src="lecture-data.js"></script>
+<script>
+let currentChapter = null;
+const readSections = new Set();
+
+function renderChapterGrid() {
+  const grid = document.getElementById('chapter-grid');
+  grid.innerHTML = '';
+  CIVILISATION_CHAPTERS.forEach(ch => {
+    const card = document.createElement('button');
+    card.className = 'chapter-card';
+    card.innerHTML = `
+      <img src="${ch.cover}" alt="">
+      <div class="body">
+        <p class="period">${ch.period}</p>
+        <h3>${ch.title}</h3>
+        <p>${ch.intro}</p>
+      </div>
+    `;
+    card.addEventListener('click', () => openChapter(ch));
+    grid.appendChild(card);
+  });
+}
+
+function openChapter(ch) {
+  currentChapter = ch;
+  readSections.clear();
+  document.getElementById('screen-select').style.display = 'none';
+  document.getElementById('screen-reading').style.display = 'block';
+  window.scrollTo(0, 0);
+
+  document.getElementById('chapter-head').innerHTML = `
+    <p class="period">${ch.period}</p>
+    <h1 class="page-title">${ch.title}</h1>
+    <p class="intro">${ch.intro}</p>
+  `;
+
+  renderTOC(ch);
+  renderContent(ch);
+  setupObserver(ch);
+}
+
+function renderTOC(ch) {
+  const list = document.getElementById('toc-list');
+  list.innerHTML = '';
+  ch.sections.forEach(item => {
+    const li = document.createElement('li');
+    li.id = 'toc-' + item.id;
+    if (item.type === 'checkpoint') li.classList.add('checkpoint-item');
+    const btn = document.createElement('button');
+    btn.innerHTML = `<span class="dot"></span><span>${item.type === 'checkpoint' ? 'Question de relance' : item.heading}</span>`;
+    btn.addEventListener('click', () => {
+      document.getElementById('sec-' + item.id).scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    li.appendChild(btn);
+    list.appendChild(li);
+  });
+}
+
+function imageBlock(img) {
+  if (!img) return '';
+  return `
+    <figure class="section-image">
+      <img src="${img.src}" alt="${img.caption.replace(/"/g,'&quot;')}" data-caption="${img.caption.replace(/"/g,'&quot;')}">
+      <figcaption>${img.caption}</figcaption>
+    </figure>`;
+}
+
+function renderContent(ch) {
+  const container = document.getElementById('reading-content');
+  container.innerHTML = ch.sections.map(item => {
+    if (item.type === 'checkpoint') {
+      return `
+        <div class="checkpoint" id="sec-${item.id}" data-id="${item.id}">
+          <p class="cp-label">Question de relance</p>
+          <p class="cp-question">${item.question}</p>
+          <div class="cp-choices" data-correct="${item.correct}">
+            ${item.choices.map((c, i) => `<button data-idx="${i}">${c}</button>`).join('')}
+          </div>
+          <div class="cp-explanation">${item.explanation}</div>
+        </div>`;
+    }
+    let imagesHtml = '';
+    if (item.image && item.image2) {
+      imagesHtml = `<div class="images-row">${imageBlock(item.image)}${imageBlock(item.image2)}</div>`;
+    } else if (item.image) {
+      imagesHtml = imageBlock(item.image);
+    }
+    return `
+      <section class="reading-section" id="sec-${item.id}" data-id="${item.id}">
+        <h2>${item.heading}</h2>
+        ${item.paragraphs.map(p => `<p>${p}</p>`).join('')}
+        ${imagesHtml}
+      </section>`;
+  }).join('');
+
+  // Checkpoint interactions
+  container.querySelectorAll('.checkpoint').forEach(cp => {
+    const choicesWrap = cp.querySelector('.cp-choices');
+    const correctIdx = parseInt(choicesWrap.dataset.correct, 10);
+    const explanation = cp.querySelector('.cp-explanation');
+    choicesWrap.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.idx, 10);
+        choicesWrap.querySelectorAll('button').forEach(b => b.disabled = true);
+        btn.classList.add(idx === correctIdx ? 'correct' : 'incorrect');
+        if (idx !== correctIdx) {
+          choicesWrap.querySelector(`button[data-idx="${correctIdx}"]`).classList.add('correct');
+        }
+        explanation.classList.add('show');
+      });
+    });
+  });
+
+  // Lightbox
+  container.querySelectorAll('.section-image img').forEach(img => {
+    img.addEventListener('click', () => openLightbox(img.src, img.dataset.caption));
+  });
+}
+
+function setupObserver(ch) {
+  const options = { rootMargin: '-15% 0px -70% 0px', threshold: 0 };
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      const id = entry.target.dataset.id;
+      if (entry.isIntersecting) {
+        markCurrent(ch, id);
+      }
+    });
+  }, options);
+  document.querySelectorAll('#reading-content [data-id]').forEach(el => observer.observe(el));
+}
+
+function markCurrent(ch, currentId) {
+  const ids = ch.sections.map(s => s.id);
+  const idx = ids.indexOf(currentId);
+  ids.forEach((id, i) => {
+    const li = document.getElementById('toc-' + id);
+    if (!li) return;
+    li.classList.remove('current', 'done');
+    if (i < idx) li.classList.add('done');
+    else if (i === idx) { li.classList.add('current'); li.classList.add('done'); }
+  });
+  const progress = ((idx + 1) / ids.length) * 100;
+  document.getElementById('toc-fill').style.width = progress + '%';
+}
+
+function openLightbox(src, caption) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox-caption').textContent = caption || '';
+  document.getElementById('lightbox').classList.add('show');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('show');
+}
+document.getElementById('lightbox-close').addEventListener('click', closeLightbox);
+document.getElementById('lightbox').addEventListener('click', (e) => {
+  if (e.target.id === 'lightbox') closeLightbox();
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); });
+
+function backToSelection() {
+  document.getElementById('screen-reading').style.display = 'none';
+  document.getElementById('screen-select').style.display = 'block';
+  window.scrollTo(0, 0);
+}
+document.getElementById('change-chapter-btn').addEventListener('click', backToSelection);
+document.getElementById('back-to-top-btn').addEventListener('click', backToSelection);
+
+renderChapterGrid();
+</script>
+
+</body>
+</html>

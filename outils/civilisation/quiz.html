@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz de civilisation</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .chapter-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1.1rem; }
+  .chapter-card {
+    background: var(--paper-alt); border: 1px solid var(--gold);
+    box-shadow: 0 0 0 4px var(--paper), 0 0 0 5px var(--border);
+    margin: 4px; padding: 0.95rem 1.05rem; cursor: pointer; text-align: left; font-family: inherit;
+  }
+  .chapter-card:hover { box-shadow: 0 0 0 4px var(--paper), 0 0 0 5px var(--gold); }
+  .chapter-card h3 { margin: 0 0 0.3rem; font-size: 0.98rem; font-family: 'Cinzel', serif; }
+  .chapter-card p { margin: 0; font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+  .progress-line { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.35rem; }
+  .quiz-question { font-family: 'Cinzel', serif; font-weight: 600; font-size: 1.08rem; margin: 0.2rem 0 1.1rem; }
+  .quiz-choices { display: flex; flex-direction: column; gap: 0.55rem; margin-bottom: 1rem; }
+  .quiz-choices button {
+    all: unset; cursor: pointer; background: var(--paper); border: 1px solid var(--border);
+    padding: 0.65rem 0.9rem; font-size: 0.92rem; color: var(--ink);
+  }
+  .quiz-choices button:hover { border-color: var(--gold); }
+  .quiz-choices button.correct { border-color: var(--emerald); background: #d7ead9; }
+  .quiz-choices button.incorrect { border-color: var(--burgundy); background: var(--burgundy-bg); }
+  .quiz-choices button:disabled { cursor: default; }
+  .quiz-explanation {
+    display: none; background: var(--emerald-bg); border-left: 3px solid var(--emerald);
+    padding: 0.75rem 0.95rem; font-size: 0.88rem; margin-bottom: 1.1rem;
+  }
+  .quiz-explanation.show { display: block; }
+  #score-line { font-family: 'Cinzel', serif; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <a href="../../index.html" class="brand">✦ Outils pédagogiques</a>
+</header>
+
+<main>
+  <a class="back-link" href="../../index.html">&larr; Retour à l'accueil</a>
+  <h1 class="page-title">Quiz de civilisation</h1>
+  <p class="page-subtitle" id="page-subtitle">Choisissez un chapitre pour tester votre compréhension des enjeux du cours.</p>
+
+  <div class="tool-shell">
+    <div id="screen-select">
+      <div class="chapter-grid" id="chapter-grid"></div>
+    </div>
+
+    <div id="screen-quiz" style="display:none;">
+      <button class="secondary" id="change-chapter-btn" style="margin-bottom:1rem;">&larr; Changer de chapitre</button>
+      <div id="quiz-area"></div>
+      <div id="result-area" style="display:none; margin-top:1rem;">
+        <h2 id="score-line"></h2>
+        <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
+          <button class="secondary" id="retry-btn">Refaire ce chapitre</button>
+          <button id="other-chapter-btn">Choisir un autre chapitre</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">Outil pédagogique — Quiz de civilisation</footer>
+
+<script src="quiz-data.js"></script>
+<script>
+let currentChapter = null;
+let current = 0;
+let score = 0;
+let answered = false;
+
+function renderChapterGrid() {
+  const grid = document.getElementById('chapter-grid');
+  grid.innerHTML = '';
+  CIVILISATION_QUIZ.forEach(ch => {
+    const card = document.createElement('button');
+    card.className = 'chapter-card';
+    card.innerHTML = `<h3>${ch.title}</h3><p>${ch.questions.length} questions</p>`;
+    card.addEventListener('click', () => startChapter(ch));
+    grid.appendChild(card);
+  });
+}
+
+function startChapter(ch) {
+  currentChapter = ch;
+  current = 0; score = 0; answered = false;
+  document.getElementById('screen-select').style.display = 'none';
+  document.getElementById('screen-quiz').style.display = 'block';
+  document.getElementById('page-subtitle').textContent = ch.title;
+  document.getElementById('result-area').style.display = 'none';
+  renderQuestion();
+}
+
+document.getElementById('change-chapter-btn').addEventListener('click', renderSelect);
+document.getElementById('other-chapter-btn').addEventListener('click', renderSelect);
+document.getElementById('retry-btn').addEventListener('click', () => startChapter(currentChapter));
+
+function renderSelect() {
+  document.getElementById('screen-quiz').style.display = 'none';
+  document.getElementById('screen-select').style.display = 'block';
+  document.getElementById('page-subtitle').textContent = "Choisissez un chapitre pour tester votre compréhension des enjeux du cours.";
+}
+
+const quizArea = document.getElementById('quiz-area');
+
+function renderQuestion() {
+  answered = false;
+  const item = currentChapter.questions[current];
+  quizArea.innerHTML = `
+    <p class="progress-line">Question ${current + 1} / ${currentChapter.questions.length}</p>
+    <p class="quiz-question">${item.q}</p>
+    <div id="choices" class="quiz-choices"></div>
+    <div id="explanation" class="quiz-explanation">${item.explanation}</div>
+    <button id="next-btn" disabled>Suivant</button>
+  `;
+  const choicesDiv = document.getElementById('choices');
+  item.choices.forEach((choice, idx) => {
+    const btn = document.createElement('button');
+    btn.textContent = choice;
+    btn.addEventListener('click', () => selectAnswer(item, idx, btn));
+    choicesDiv.appendChild(btn);
+  });
+  document.getElementById('next-btn').addEventListener('click', nextQuestion);
+}
+
+function selectAnswer(item, idx, btn) {
+  if (answered) return;
+  answered = true;
+  const allButtons = document.querySelectorAll('#choices button');
+  allButtons.forEach(b => b.disabled = true);
+
+  if (idx === item.correct) {
+    score++;
+    btn.classList.add('correct');
+  } else {
+    btn.classList.add('incorrect');
+    allButtons[item.correct].classList.add('correct');
+  }
+  document.getElementById('explanation').classList.add('show');
+  document.getElementById('next-btn').disabled = false;
+}
+
+function nextQuestion() {
+  current++;
+  if (current < currentChapter.questions.length) renderQuestion();
+  else showResult();
+}
+
+function showResult() {
+  quizArea.innerHTML = '';
+  document.getElementById('result-area').style.display = 'block';
+  document.getElementById('score-line').textContent = `Score : ${score} / ${currentChapter.questions.length}`;
+}
+
+renderChapterGrid();
+</script>
+
+</body>
+</html>
