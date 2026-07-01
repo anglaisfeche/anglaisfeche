@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prononciation — Shadowing</title>
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  .cat-grid, .ex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 0.8rem; margin-bottom: 1rem; }
+  .cat-card, .ex-card {
+    background: var(--paper); border: 1px solid var(--gold);
+    box-shadow: 0 0 0 3px var(--paper), 0 0 0 4px var(--border);
+    margin: 3px; padding: 0.9rem 1.05rem; cursor: pointer; text-align: left; font-family: inherit;
+  }
+  .cat-card:hover, .ex-card:hover { box-shadow: 0 0 0 3px var(--paper), 0 0 0 4px var(--gold); }
+  .cat-card h3, .ex-card h3 { margin: 0; font-size: 0.95rem; font-family: 'Cinzel', serif; font-weight: 600; }
+  .ex-card .code { color: var(--gold); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 0.3rem; }
+  .instructions { font-size: 0.92rem; color: var(--ink-soft); margin-bottom: 1.3rem; }
+  .item-row {
+    display: flex; align-items: center; gap: 0.7rem; padding: 0.65rem 0.8rem;
+    background: var(--paper); border-left: 3px solid var(--border); margin-bottom: 0.5rem; flex-wrap: wrap;
+  }
+  .item-row.active { border-left-color: var(--gold); }
+  .item-text { flex: 1; min-width: 180px; font-size: 1rem; }
+  .item-row button { font-size: 0.7rem; padding: 0.4rem 0.7rem; }
+  .item-feedback { font-size: 0.8rem; min-width: 140px; }
+  .item-feedback.ok { color: var(--emerald); font-weight: 600; }
+  .item-feedback.ko { color: var(--burgundy); font-weight: 600; }
+  .unsupported-notice {
+    border: 1px dashed var(--border); background: var(--paper-alt);
+    padding: 0.9rem 1.05rem; font-size: 0.85rem; font-style: italic; color: var(--ink-soft); margin-bottom: 1.2rem;
+  }
+  select#accent-select { margin-bottom: 1.2rem; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <a href="../index.html" class="brand">✦ Outils pédagogiques</a>
+</header>
+
+<main>
+  <a class="back-link" href="../index.html">&larr; Retour à l'accueil</a>
+  <h1 class="page-title">Prononciation — Shadowing</h1>
+  <p class="page-subtitle" id="page-subtitle">Choisissez une catégorie d'exercices de prononciation.</p>
+
+  <div class="tool-shell">
+    <div id="speech-notice"></div>
+
+    <div id="screen-sections">
+      <div class="cat-grid" id="section-grid"></div>
+    </div>
+
+    <div id="screen-exercises" style="display:none;">
+      <button class="secondary" id="back-to-sections" style="margin-bottom:1rem;">&larr; Autres catégories</button>
+      <div class="ex-grid" id="exercise-grid"></div>
+    </div>
+
+    <div id="screen-practice" style="display:none;">
+      <button class="secondary" id="back-to-exercises" style="margin-bottom:1rem;">&larr; Autres exercices</button>
+      <h2 id="ex-title" style="margin-top:0;"></h2>
+      <p class="instructions" id="ex-instructions"></p>
+      <label style="display:block; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:0.4rem;">Accent</label>
+      <select id="accent-select">
+        <option value="en-GB">Anglais britannique</option>
+        <option value="en-US">Anglais américain</option>
+      </select>
+      <div id="items-list"></div>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">Outil pédagogique — Prononciation (synthèse vocale et reconnaissance vocale du navigateur)</footer>
+
+<script src="prononciation-data.js"></script>
+<script>
+const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+const speechOk = 'speechSynthesis' in window;
+const recognitionOk = !!SpeechRecognitionAPI;
+
+if (!speechOk || !recognitionOk) {
+  document.getElementById('speech-notice').innerHTML = `<div class="unsupported-notice">
+    ${!speechOk ? "Votre navigateur ne supporte pas la synthèse vocale : vous ne pourrez pas écouter les modèles audio. " : ""}
+    ${!recognitionOk ? "Votre navigateur ne supporte pas la reconnaissance vocale : la fonction « s'enregistrer » ne sera pas disponible (essayez avec Chrome). " : ""}
+    Vous pouvez tout de même consulter les exercices et vous entraîner à voix haute sans retour automatique.</div>`;
+}
+
+let currentSection = null;
+let currentExercise = null;
+
+function renderSections() {
+  document.getElementById('screen-sections').style.display = 'block';
+  document.getElementById('screen-exercises').style.display = 'none';
+  document.getElementById('screen-practice').style.display = 'none';
+  document.getElementById('page-subtitle').textContent = "Choisissez une catégorie d'exercices de prononciation.";
+  const grid = document.getElementById('section-grid');
+  grid.innerHTML = '';
+  PRONUNCIATION_SECTIONS.forEach(sec => {
+    const card = document.createElement('button');
+    card.className = 'cat-card';
+    const total = sec.exercises.reduce((n, e) => n + e.items.length, 0);
+    card.innerHTML = `<h3>${sec.title}</h3><p style="margin:0.3rem 0 0; font-size:0.78rem; color:var(--text-muted);">${sec.exercises.length} exercices · ${total} items</p>`;
+    card.addEventListener('click', () => { currentSection = sec; renderExercises(); });
+    grid.appendChild(card);
+  });
+}
+
+function renderExercises() {
+  document.getElementById('screen-sections').style.display = 'none';
+  document.getElementById('screen-exercises').style.display = 'block';
+  document.getElementById('screen-practice').style.display = 'none';
+  document.getElementById('page-subtitle').textContent = currentSection.title;
+  const grid = document.getElementById('exercise-grid');
+  grid.innerHTML = '';
+  currentSection.exercises.forEach(ex => {
+    const card = document.createElement('button');
+    card.className = 'ex-card';
+    card.innerHTML = `<span class="code">${ex.code}</span><h3>${ex.title}</h3>`;
+    card.addEventListener('click', () => startExercise(ex));
+    grid.appendChild(card);
+  });
+}
+
+document.getElementById('back-to-sections').addEventListener('click', renderSections);
+document.getElementById('back-to-exercises').addEventListener('click', renderExercises);
+
+function startExercise(ex) {
+  currentExercise = ex;
+  document.getElementById('screen-exercises').style.display = 'none';
+  document.getElementById('screen-practice').style.display = 'block';
+  document.getElementById('page-subtitle').textContent = currentSection.title;
+  document.getElementById('ex-title').innerHTML = `<span style="color:var(--gold); font-size:0.8rem; text-transform:uppercase; letter-spacing:0.06em; display:block; margin-bottom:0.3rem;">${ex.code}</span>${ex.title}`;
+  document.getElementById('ex-instructions').textContent = ex.instructions;
+
+  const list = document.getElementById('items-list');
+  list.innerHTML = '';
+  ex.items.forEach((text, idx) => {
+    const row = document.createElement('div');
+    row.className = 'item-row';
+    row.innerHTML = `
+      <span class="item-text">${text}</span>
+      <button class="secondary listen-btn" data-idx="${idx}" ${speechOk ? '' : 'disabled'}>&#128266; Écouter</button>
+      <button class="secondary record-btn" data-idx="${idx}" ${recognitionOk ? '' : 'disabled'}>&#127908; S'enregistrer</button>
+      <span class="item-feedback" id="feedback-${idx}"></span>
+    `;
+    list.appendChild(row);
+  });
+
+  list.querySelectorAll('.listen-btn').forEach(btn => btn.addEventListener('click', () => {
+    const idx = parseInt(btn.dataset.idx, 10);
+    speak(ex.items[idx]);
+  }));
+  list.querySelectorAll('.record-btn').forEach(btn => btn.addEventListener('click', () => {
+    const idx = parseInt(btn.dataset.idx, 10);
+    record(ex.items[idx], idx, btn);
+  }));
+}
+
+function speak(text) {
+  if (!speechOk) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = document.getElementById('accent-select').value;
+  utter.rate = 0.85;
+  window.speechSynthesis.speak(utter);
+}
+
+function normalize(s) {
+  return s.toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function record(targetText, idx, btn) {
+  const feedback = document.getElementById(`feedback-${idx}`);
+  const recognition = new SpeechRecognitionAPI();
+  recognition.lang = document.getElementById('accent-select').value;
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  btn.disabled = true;
+  feedback.className = 'item-feedback';
+  feedback.textContent = '🎙️ Écoute en cours...';
+
+  recognition.onresult = (event) => {
+    const heard = event.results[0][0].transcript;
+    const target = normalize(targetText);
+    const said = normalize(heard);
+    const match = said === target || target.includes(said) || said.includes(target);
+    feedback.textContent = match ? `✓ Entendu : "${heard}"` : `Entendu : "${heard}" — réessayez`;
+    feedback.className = 'item-feedback ' + (match ? 'ok' : 'ko');
+  };
+  recognition.onerror = () => {
+    feedback.textContent = "Erreur du micro (autorisez l'accès au micro dans votre navigateur).";
+    feedback.className = 'item-feedback ko';
+  };
+  recognition.onend = () => { btn.disabled = false; };
+
+  recognition.start();
+}
+
+renderSections();
+</script>
+
+</body>
+</html>

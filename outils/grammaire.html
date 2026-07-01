@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grammaire</title>
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.85rem; margin-bottom: 1.5rem; }
+  .cat-card {
+    background: var(--paper); border: 1px solid var(--gold);
+    box-shadow: 0 0 0 3px var(--paper), 0 0 0 4px var(--border);
+    margin: 3px; padding: 1rem; cursor: pointer; text-align: center; font-family: 'Cinzel', serif;
+    font-weight: 600; letter-spacing: 0.04em;
+  }
+  .cat-card:hover { box-shadow: 0 0 0 3px var(--paper), 0 0 0 4px var(--gold); }
+  .rule-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 0.7rem; }
+  .rule-card {
+    background: var(--paper); border: 1px solid var(--border);
+    padding: 0.7rem 0.85rem; cursor: pointer; text-align: left; font-family: inherit; font-size: 0.85rem;
+  }
+  .rule-card:hover { border-color: var(--gold); }
+  .rule-card .code { font-family: 'Cinzel', serif; font-weight: 600; color: var(--emerald); margin-right: 0.4rem; }
+  .option-sentence { display: block; width: 100%; text-align: left; text-transform: none; letter-spacing: normal;
+    font-weight: 500; margin-bottom: 0.6rem; padding: 0.75rem 0.9rem; font-size: 0.95rem; }
+  .explanation-box {
+    display: none; background: var(--emerald-bg); border: 1px solid var(--emerald);
+    padding: 0.9rem 1rem; margin-top: 1rem; font-size: 0.92rem;
+  }
+  .explanation-box.show { display: block; }
+  .rule-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 1rem; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <a href="../index.html" class="brand">✦ Outils pédagogiques</a>
+</header>
+
+<main>
+  <a class="back-link" href="../index.html">&larr; Retour à l'accueil</a>
+  <h1 class="page-title">Précis de grammaire</h1>
+  <p class="page-subtitle" id="page-subtitle">Choisissez une catégorie grammaticale.</p>
+
+  <div class="tool-shell">
+    <div id="screen-category">
+      <div class="cat-grid" id="cat-grid"></div>
+    </div>
+
+    <div id="screen-rules" style="display:none;">
+      <button class="secondary" id="back-to-cats" style="margin-bottom:1rem;">&larr; Changer de catégorie</button>
+      <div class="rule-grid" id="rule-grid"></div>
+    </div>
+
+    <div id="screen-exercise" style="display:none;">
+      <button class="secondary" id="back-to-rules" style="margin-bottom:1rem;">&larr; Autres points de grammaire</button>
+      <p class="rule-title" id="rule-title"></p>
+      <p style="margin-bottom:1rem;">Laquelle de ces deux phrases est correcte ?</p>
+      <div id="options"></div>
+      <div class="explanation-box" id="explanation-box"></div>
+      <button id="next-rule-btn" style="margin-top:1rem; display:none;">Un autre point de grammaire au hasard</button>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">Outil pédagogique — Précis de grammaire</footer>
+
+<script src="grammaire-data.js"></script>
+<script>
+let currentCategory = null;
+let currentRule = null;
+
+function categories() {
+  return [...new Set(GRAMMAR_RULES.map(r => r.category))];
+}
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+
+function showScreen(id) {
+  ['screen-category', 'screen-rules', 'screen-exercise'].forEach(s => document.getElementById(s).style.display = (s === id ? 'block' : 'none'));
+}
+
+function renderCategories() {
+  showScreen('screen-category');
+  document.getElementById('page-subtitle').textContent = 'Choisissez une catégorie grammaticale.';
+  const grid = document.getElementById('cat-grid');
+  grid.innerHTML = '';
+  categories().forEach(cat => {
+    const count = GRAMMAR_RULES.filter(r => r.category === cat).length;
+    const btn = document.createElement('button');
+    btn.className = 'cat-card';
+    btn.innerHTML = `${cat}<br><span style="font-family:'Jost',sans-serif; font-weight:400; font-size:0.75rem; text-transform:none; letter-spacing:0; color:var(--text-muted);">${count} règles</span>`;
+    btn.addEventListener('click', () => { currentCategory = cat; renderRules(); });
+    grid.appendChild(btn);
+  });
+}
+
+function renderRules() {
+  showScreen('screen-rules');
+  document.getElementById('page-subtitle').textContent = currentCategory;
+  const grid = document.getElementById('rule-grid');
+  grid.innerHTML = '';
+  GRAMMAR_RULES.filter(r => r.category === currentCategory).forEach(rule => {
+    const btn = document.createElement('button');
+    btn.className = 'rule-card';
+    btn.innerHTML = `<span class="code">${rule.code}</span>${rule.title}`;
+    btn.addEventListener('click', () => startRule(rule));
+    grid.appendChild(btn);
+  });
+  const randomBtn = document.createElement('button');
+  randomBtn.className = 'rule-card';
+  randomBtn.style.borderColor = 'var(--gold)';
+  randomBtn.innerHTML = `<span class="code">✦</span>Point au hasard`;
+  randomBtn.addEventListener('click', () => {
+    const pool = GRAMMAR_RULES.filter(r => r.category === currentCategory);
+    startRule(pool[Math.floor(Math.random() * pool.length)]);
+  });
+  grid.appendChild(randomBtn);
+}
+
+document.getElementById('back-to-cats').addEventListener('click', renderCategories);
+document.getElementById('back-to-rules').addEventListener('click', renderRules);
+
+function startRule(rule) {
+  currentRule = rule;
+  showScreen('screen-exercise');
+  document.getElementById('page-subtitle').textContent = currentCategory;
+  document.getElementById('rule-title').innerHTML = `<span class="code" style="color:var(--gold);">${rule.code}</span> ${rule.title}`;
+  document.getElementById('explanation-box').classList.remove('show');
+  document.getElementById('next-rule-btn').style.display = 'none';
+
+  const options = shuffle([{ text: rule.correct, ok: true }, { text: rule.wrong, ok: false }]);
+  const container = document.getElementById('options');
+  container.innerHTML = '';
+  options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'option-sentence secondary';
+    btn.textContent = opt.text;
+    btn.addEventListener('click', () => answer(opt, btn));
+    container.appendChild(btn);
+  });
+}
+
+function answer(opt, btn) {
+  const allButtons = document.querySelectorAll('#options button');
+  allButtons.forEach(b => b.disabled = true);
+  if (opt.ok) {
+    btn.style.background = 'var(--emerald-bg)'; btn.style.borderColor = 'var(--emerald)';
+  } else {
+    btn.style.background = 'var(--burgundy-bg)'; btn.style.borderColor = 'var(--burgundy)';
+    allButtons.forEach(b => { if (b.textContent === currentRule.correct) { b.style.background = 'var(--emerald-bg)'; b.style.borderColor = 'var(--emerald)'; } });
+  }
+  const box = document.getElementById('explanation-box');
+  box.innerHTML = `<strong>${currentRule.code} — ${currentRule.title} :</strong> ${currentRule.explanation}`;
+  box.classList.add('show');
+  document.getElementById('next-rule-btn').style.display = 'inline-block';
+}
+
+document.getElementById('next-rule-btn').addEventListener('click', () => {
+  const pool = GRAMMAR_RULES.filter(r => r.category === currentCategory);
+  startRule(pool[Math.floor(Math.random() * pool.length)]);
+});
+
+renderCategories();
+</script>
+
+</body>
+</html>

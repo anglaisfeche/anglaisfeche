@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Collocations</title>
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.85rem; }
+  .cat-card {
+    background: var(--paper); border: 1px solid var(--gold);
+    box-shadow: 0 0 0 3px var(--paper), 0 0 0 4px var(--border);
+    margin: 3px; padding: 0.9rem 1.05rem; cursor: pointer; text-align: left; font-family: inherit;
+  }
+  .cat-card:hover { box-shadow: 0 0 0 3px var(--paper), 0 0 0 4px var(--gold); }
+  .cat-card h3 { margin: 0; font-size: 0.95rem; font-family: 'Cinzel', serif; font-weight: 600; }
+  .noun-tag {
+    display: inline-block; font-family: 'Cinzel', serif; font-weight: 600; font-size: 0.72rem;
+    text-transform: uppercase; letter-spacing: 0.08em; color: var(--gold); margin-bottom: 0.6rem;
+  }
+  .sentence-box { font-size: 1.05rem; margin: 0.6rem 0 1.2rem; line-height: 1.7; }
+  .sentence-box .gap { border-bottom: 2px solid var(--emerald); padding: 0 0.3rem; font-weight: 600; }
+  .choices-grid { display: flex; flex-direction: column; gap: 0.55rem; margin: 1.1rem 0; }
+  .choices-grid button { text-align: left; text-transform: none; letter-spacing: normal; font-weight: 500; }
+  .progress-line { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.25rem; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <a href="../index.html" class="brand">✦ Outils pédagogiques</a>
+</header>
+
+<main>
+  <a class="back-link" href="../index.html">&larr; Retour à l'accueil</a>
+  <h1 class="page-title">Collocations</h1>
+  <p class="page-subtitle" id="page-subtitle">Choisissez une catégorie pour commencer.</p>
+
+  <div class="tool-shell">
+    <div id="screen-select">
+      <div class="cat-grid" id="cat-grid"></div>
+    </div>
+
+    <div id="screen-quiz" style="display:none;">
+      <button class="secondary" id="change-cat-btn" style="margin-bottom:1rem;">&larr; Changer de catégorie</button>
+      <div id="quiz-area"></div>
+      <div id="result-area" style="display:none; margin-top:1rem;">
+        <h2 id="score-line"></h2>
+        <div style="display:flex; gap:0.6rem;">
+          <button id="retry-btn" class="secondary">Refaire cette catégorie</button>
+          <button id="other-cat-btn">Choisir une autre catégorie</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">Outil pédagogique — Collocations</footer>
+
+<script src="collocations-data.js"></script>
+<script>
+// ------------------------------------------------------------
+// Conjugaison approximative pour repérer le verbe dans la phrase
+// ------------------------------------------------------------
+const IRREGULAR = {
+  make: ["makes","made","made"], draw: ["draws","drew","drawn"], come: ["comes","came","come"],
+  go: ["goes","went","gone"], shed: ["sheds","shed","shed"], pay: ["pays","paid","paid"],
+  see: ["sees","saw","seen"], break: ["breaks","broke","broken"], spread: ["spreads","spread","spread"],
+  hit: ["hits","hit","hit"], tell: ["tells","told","told"], bear: ["bears","bore","borne"],
+  keep: ["keeps","kept","kept"], build: ["builds","built","built"], shake: ["shakes","shook","shaken"],
+  take: ["takes","took","taken"], hold: ["holds","held","held"], cast: ["casts","cast","cast"],
+  fall: ["falls","fell","fallen"], get: ["gets","got","gotten"], have: ["has","had","had"],
+  run: ["runs","ran","run"], meet: ["meets","met","met"], win: ["wins","won","won"],
+  overcome: ["overcomes","overcame","overcome"], stand: ["stands","stood","stood"],
+  strike: ["strikes","struck","struck"], withdraw: ["withdraws","withdrew","withdrawn"],
+  cut: ["cuts","cut","cut"], show: ["shows","showed","shown"], set: ["sets","set","set"],
+  beat: ["beats","beat","beaten"], bring: ["brings","brought","brought"], upset: ["upsets","upset","upset"],
+  override: ["overrides","overrode","overridden"], speak: ["speaks","spoke","spoken"],
+  breed: ["breeds","bred","bred"], stick: ["sticks","stuck","stuck"], lead: ["leads","led","led"],
+  undertake: ["undertakes","undertook","undertaken"], give: ["gives","gave","given"],
+  // verbes à orthographe britannique (doublement du L même non accentué)
+  fuel: ["fuels","fuelled","fuelled"], enrol: ["enrols","enrolled","enrolled"],
+  dispel: ["dispels","dispelled","dispelled"], repel: ["repels","repelled","repelled"],
+  lay: ["lays","laid","laid"]
+};
+
+function escapeRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+function regularForms(w) {
+  const forms = new Set([w, w + 's']);
+  const doubles = /[^aeiou][aeiou][^aeiouwxy]$/.test(w) && w.length <= 7;
+  if (/[sxz]$|[cs]h$/.test(w)) forms.add(w + 'es');
+  if (/[^aeiou]y$/.test(w)) { forms.add(w.slice(0, -1) + 'ies'); forms.add(w.slice(0, -1) + 'ied'); }
+  else if (w.endsWith('e')) { forms.add(w + 'd'); forms.add(w.slice(0, -1) + 'ing'); }
+  else if (doubles) { forms.add(w + w.slice(-1) + 'ed'); forms.add(w + w.slice(-1) + 'ing'); forms.add(w + 'ed'); forms.add(w + 'ing'); }
+  else { forms.add(w + 'ed'); forms.add(w + 'ing'); }
+  return [...forms];
+}
+
+function headForms(word) {
+  const w = word.toLowerCase();
+  if (w === 'be') return ["is", "are", "was", "were", "been", "being", "be"];
+  const forms = new Set(regularForms(w));
+  if (IRREGULAR[w]) IRREGULAR[w].forEach(f => forms.add(f));
+  return [...forms];
+}
+
+// Renvoie {before, gap, after} en repérant le verbe conjugué dans la phrase
+function findGap(example, verbPhrase) {
+  const words = verbPhrase.replace(/\(.*?\)/g, '').trim().split(/\s+/);
+  const head = words[0];
+  const rest = words.slice(1);
+  const forms = headForms(head);
+  const restPattern = rest.length ? '\\s+' + rest.map(escapeRegex).join('\\s+') : '';
+  const pattern = new RegExp('\\b(' + forms.map(escapeRegex).join('|') + ')' + restPattern + '\\b', 'i');
+  let m = example.match(pattern);
+  if (!m) {
+    // repli : cherche juste le verbe principal, sans la particule
+    const loose = new RegExp('\\b(' + forms.map(escapeRegex).join('|') + ')\\b', 'i');
+    m = example.match(loose);
+  }
+  if (!m) return { before: example, gap: '', after: '' };
+  return { before: example.slice(0, m.index), gap: m[0], after: example.slice(m.index + m[0].length) };
+}
+
+// ------------------------------------------------------------
+// État
+// ------------------------------------------------------------
+let currentCategory = null;
+let pool = [];
+let current = 0;
+let score = 0;
+let answered = false;
+let items = [];
+
+function flattenCategory(cat) {
+  const list = [];
+  cat.nouns.forEach(n => n.entries.forEach(e => list.push({ noun: n.noun, verb: e.verb, example: e.example })));
+  return list;
+}
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+
+function renderCategorySelection() {
+  document.getElementById('screen-select').style.display = 'block';
+  document.getElementById('screen-quiz').style.display = 'none';
+  document.getElementById('page-subtitle').textContent = 'Choisissez une catégorie de collocations pour commencer.';
+  const grid = document.getElementById('cat-grid');
+  grid.innerHTML = '';
+  COLLOCATION_CATEGORIES.forEach(cat => {
+    const card = document.createElement('button');
+    card.className = 'cat-card';
+    const count = flattenCategory(cat).length;
+    card.innerHTML = `<h3>${cat.title}</h3><p style="margin:0.3rem 0 0; font-size:0.8rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">${count} collocations</p>`;
+    card.addEventListener('click', () => startCategory(cat));
+    grid.appendChild(card);
+  });
+}
+
+function startCategory(cat) {
+  currentCategory = cat;
+  items = shuffle(flattenCategory(cat));
+  current = 0; score = 0;
+  document.getElementById('screen-select').style.display = 'none';
+  document.getElementById('screen-quiz').style.display = 'block';
+  document.getElementById('page-subtitle').textContent = cat.title;
+  document.getElementById('result-area').style.display = 'none';
+  renderQuestion();
+}
+
+document.getElementById('change-cat-btn').addEventListener('click', renderCategorySelection);
+document.getElementById('other-cat-btn').addEventListener('click', renderCategorySelection);
+document.getElementById('retry-btn').addEventListener('click', () => startCategory(currentCategory));
+
+const quizArea = document.getElementById('quiz-area');
+
+function buildChoices(item) {
+  const allVerbs = flattenCategory(currentCategory).map(i => i.verb).filter((v, idx, arr) => arr.indexOf(v) === idx);
+  const distractors = shuffle(allVerbs.filter(v => v !== item.verb)).slice(0, 3);
+  return shuffle([item.verb, ...distractors]);
+}
+
+function renderQuestion() {
+  answered = false;
+  const item = items[current];
+  const gap = findGap(item.example, item.verb);
+  const choices = buildChoices(item);
+
+  quizArea.innerHTML = `
+    <p class="progress-line">Question ${current + 1} / ${items.length}</p>
+    <span class="noun-tag">${item.noun}</span>
+    <p class="sentence-box">${gap.before}<span class="gap">_____</span>${gap.after}</p>
+    <div id="choices" class="choices-grid"></div>
+    <div id="feedback" style="min-height:1.5rem; font-weight:600;"></div>
+    <button id="next-btn" style="margin-top:0.75rem;" disabled>Suivant</button>
+  `;
+  const choicesDiv = document.getElementById('choices');
+  choices.forEach(choice => {
+    const btn = document.createElement('button');
+    btn.textContent = choice;
+    btn.className = 'secondary';
+    btn.addEventListener('click', () => selectAnswer(item, choice, btn));
+    choicesDiv.appendChild(btn);
+  });
+  document.getElementById('next-btn').addEventListener('click', nextQuestion);
+}
+
+function selectAnswer(item, choice, btn) {
+  if (answered) return;
+  answered = true;
+  const feedback = document.getElementById('feedback');
+  const allButtons = document.querySelectorAll('#choices button');
+  allButtons.forEach(b => b.disabled = true);
+
+  if (choice === item.verb) {
+    score++;
+    btn.style.background = 'var(--emerald-bg)'; btn.style.borderColor = 'var(--emerald)';
+    feedback.innerHTML = `<span class="feedback-stamp correct">Bonne réponse</span>`;
+  } else {
+    btn.style.background = 'var(--burgundy-bg)'; btn.style.borderColor = 'var(--burgundy)';
+    feedback.innerHTML = `<span class="feedback-stamp incorrect">Incorrect — réponse : ${item.verb}</span>`;
+    allButtons.forEach(b => { if (b.textContent === item.verb) { b.style.background = 'var(--emerald-bg)'; b.style.borderColor = 'var(--emerald)'; } });
+  }
+  document.getElementById('next-btn').disabled = false;
+}
+
+function nextQuestion() {
+  current++;
+  if (current < items.length) renderQuestion();
+  else showResult();
+}
+
+function showResult() {
+  quizArea.innerHTML = '';
+  document.getElementById('result-area').style.display = 'block';
+  document.getElementById('score-line').textContent = `Score : ${score} / ${items.length}`;
+}
+
+renderCategorySelection();
+</script>
+
+</body>
+</html>

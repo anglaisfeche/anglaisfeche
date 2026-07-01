@@ -1,100 +1,83 @@
 # Outils pédagogiques
 
-Site statique (HTML/CSS/JS pur, sans build) hébergeant des outils interactifs pour vos étudiants.
+Site statique (HTML/CSS/JS pur, sans build) hébergeant des outils interactifs pour les étudiants de CPGE B/L (T.Fêche), construit à partir du *Reference Booklet*.
 
 ## Mettre le site en ligne avec GitHub Pages
 
-1. Créez un nouveau dépôt sur GitHub (par exemple `outils-pedagogiques`).
-2. Ajoutez tous les fichiers de ce dossier à la racine du dépôt :
-   ```
-   git init
-   git add .
-   git commit -m "Premier déploiement du site"
-   git branch -M main
-   git remote add origin https://github.com/VOTRE-NOM/outils-pedagogiques.git
-   git push -u origin main
-   ```
-3. Sur GitHub, allez dans **Settings → Pages**.
-4. Dans "Build and deployment", choisissez **Deploy from a branch**, sélectionnez la branche `main` et le dossier `/ (root)`.
-5. Après quelques minutes, votre site sera visible à l'adresse :
-   `https://VOTRE-NOM.github.io/outils-pedagogiques/`
+1. Sur GitHub, allez dans **Settings → Pages**.
+2. Dans « Build and deployment », choisissez **Deploy from a branch**, branche `main`, dossier `/ (root)`.
+3. Votre site sera visible à `https://VOTRE-NOM.github.io/VOTRE-DEPOT/`.
 
-À chaque fois que vous modifiez un fichier et faites `git push`, le site se met à jour automatiquement (1-2 minutes de délai).
+Pour mettre à jour le site : glissez-déposez les fichiers de ce dossier dans **Add file → Upload files** sur GitHub (ils remplaceront les fichiers existants et ajouteront les nouveaux), puis Commit.
 
 ## Structure du projet
 
 ```
-index.html               → page d'accueil, 5 catégories d'outils
-assets/style.css          → styles partagés (identité Art Déco)
+index.html                     → page d'accueil, 5 catégories d'outils
+assets/style.css                → styles partagés (identité Art Déco)
 outils/
-  qcm.html                 → QCM de vocabulaire
-  vocab-data.js            → listes de vocabulaire utilisées par le QCM
-  calculatrice.html        → calculatrice scientifique (non reliée à l'accueil actuellement)
-documents/                 → (à créer) déposez-y vos PDF de cours
+  qcm.html + vocab-data.js       → QCM de vocabulaire (21 listes thématiques)
+  grammaire.html + grammaire-data.js   → 141 règles de grammaire (Nom/Adj/Verbe/Syntaxe/Prép/Orth)
+  connecteurs.html + connecteurs-data.js → réécriture avec mots de liaison
+  collocations.html + collocations-data.js → 22 catégories de collocations, phrases à trous
+  prononciation.html + prononciation-data.js → shadowing (synthèse + reconnaissance vocale)
+  reformulation.html + reformulation-data.js → reformulation de problématiques d'essai
+  calculatrice.html              → calculatrice scientifique (non reliée à l'accueil)
+actualites/
+  index.html                     → affiche le fil d'actualité
+  news.json                      → généré automatiquement (voir ci-dessous)
+scripts/fetch-news.mjs            → script Node qui récupère les flux RSS
+.github/workflows/update-news.yml → action GitHub qui exécute le script chaque jour
 ```
 
-## Les 5 catégories de la page d'accueil
+## Le fil d'actualité (mise à jour automatique)
 
-La page d'accueil est organisée en 5 catégories fixes :
-- **Travail de la langue** (contient le QCM de vocabulaire)
-- **Méthode de l'essai**
-- **Actualités**
-- **Civilisation**
-- **Traduction**
+La catégorie **Connaissance de l'actualité** affiche des titres récents de presse anglophone fiable (The Guardian, BBC News, The New York Times), récupérés via leurs flux RSS publics — **aucune clé API n'est nécessaire**.
 
-Les catégories vides affichent actuellement "Aucun outil pour l'instant — à venir."
-Dès que vous ajoutez un outil, remplacez ce message par une carte (voir ci-dessous).
+Une fois le dépôt en ligne, l'action GitHub `.github/workflows/update-news.yml` s'exécute automatiquement chaque jour (6h05 UTC) et régénère `actualites/news.json`. Vous pouvez aussi la lancer manuellement : onglet **Actions** du dépôt → « Mettre à jour le fil d'actualité » → **Run workflow**.
 
-## Ajouter un nouvel outil
+Si l'action ne se déclenche pas : vérifiez dans **Settings → Actions → General** que les workflows sont autorisés à écrire dans le dépôt (« Read and write permissions »).
 
-1. Dupliquez `outils/qcm.html` comme point de départ (ou repartez d'une page vierge).
-2. Renommez le fichier (ex. `outils/essai-plan.html`).
-3. Adaptez le contenu et le script JavaScript à votre outil.
-4. Dans `index.html`, repérez la catégorie concernée et remplacez le `<p class="empty-note">...</p>`
-   (ou ajoutez à côté d'une carte existante dans `<div class="card-grid">`) par :
-   ```html
-   <div class="card-grid">
-     <a class="card" href="outils/essai-plan.html">
-       <span class="icon"><span>✒️</span></span>
-       <h3>Nom de l'outil</h3>
-       <p>Description courte de l'outil.</p>
-     </a>
-   </div>
-   ```
+## Grammaire, collocations, mots de liaison
 
-## Modifier ou ajouter une liste de vocabulaire (QCM)
+Ces trois outils sont entièrement basés sur des données statiques (fichiers `*-data.js`), sans IA ni backend :
+- **Grammaire** : chaque règle propose une phrase correcte et une phrase fautive, l'élève doit identifier la bonne.
+- **Collocations** : la phrase d'exemple est affichée avec le verbe masqué automatiquement (repérage par conjugaison approchée) ; l'élève choisit le bon verbe parmi plusieurs propositions.
+- **Mots de liaison** : l'élève réécrit librement une phrase avec le connecteur donné, puis compare avec un exemple de réécriture (auto-évaluation, pas de correction automatique).
 
-Le QCM (`outils/qcm.html`) pioche ses questions dans le fichier `outils/vocab-data.js`.
-L'élève choisit d'abord une liste, puis le sens (anglais → français, français → anglais,
-ou mixte) et le nombre de questions ; les mauvaises réponses (distracteurs) sont générées
-automatiquement à partir des autres mots de la même liste.
+Pour ajouter de nouvelles règles/collocations/connecteurs, copiez un bloc dans le fichier `*-data.js` correspondant : le format est documenté en commentaire en haut de chaque fichier.
 
-Pour ajouter une nouvelle liste, ouvrez `outils/vocab-data.js` et ajoutez un bloc au tableau
-`VOCAB_LISTS` :
-```js
-{
-  id: "identifiant-unique-sans-accent",
-  title: "Titre affiché aux élèves",
-  words: [
-    { en: "English word", fr: "Traduction française" },
-    { en: "Another word", fr: "Une autre traduction" },
-    // ajoutez autant de mots que nécessaire
-  ]
-}
+## Reformulation de problématique (Méthode de l'essai)
+
+Fonctionne en auto-évaluation : l'élève reformule une question dans une zone de texte libre, puis peut afficher des propositions de reformulation pour comparer. Pour ajouter des problématiques, éditez `outils/reformulation-data.js`.
+
+**Note :** un vrai retour généré par IA sur la reformulation de l'élève (comme envisagé initialement) nécessiterait un service backend avec une clé API, ce qui n'est pas compatible avec un site 100% statique et gratuit sur GitHub Pages. Cette version utilise donc l'auto-évaluation par comparaison à des modèles. Si vous souhaitez ajouter un vrai retour IA plus tard, il faudra un petit backend (ex. Cloudflare Worker) qui appelle une API IA en gardant la clé secrète côté serveur — n'hésitez pas à demander de l'aide pour cette étape.
+
+## Prononciation — Shadowing
+
+Utilise les API natives du navigateur : `speechSynthesis` (voix de synthèse, pour écouter le modèle) et `SpeechRecognition` (reconnaissance vocale, pour comparer ce que l'élève a dit au mot ciblé). Fonctionne mieux sur Chrome/Edge ; certains navigateurs (Firefox, Safari) ne supportent pas la reconnaissance vocale — le site le signale et propose alors l'écoute seule. Pour ajouter des exercices, éditez `outils/prononciation-data.js`.
+
+## Ajouter un nouvel outil sur la page d'accueil
+
+1. Créez votre page dans `outils/` (dupliquez un outil existant comme point de départ).
+2. Dans `index.html`, dans la catégorie concernée, remplacez `<p class="empty-note">...</p>` par :
+
+```html
+<div class="card-grid">
+  <a class="card" href="outils/mon-outil.html">
+    <span class="icon"><span>✒️</span></span>
+    <h3>Nom de l'outil</h3>
+    <p>Description courte de l'outil.</p>
+  </a>
+</div>
 ```
-Aucune autre modification n'est nécessaire : la nouvelle liste apparaît automatiquement
-sur l'écran de sélection du QCM.
-
-## Ajouter des documents (PDF)
-
-1. Créez un dossier `documents/` à la racine du projet.
-2. Déposez-y vos fichiers PDF.
-3. Ajoutez des liens vers ces fichiers dans `index.html`, ou créez une page `documents/index.html` listant vos fichiers si vous en avez beaucoup.
 
 ## Astuce
 
-Vous pouvez tester le site en local avant de le publier : ouvrez simplement `index.html` dans votre navigateur, ou lancez un petit serveur local :
+Testez le site en local avant de le publier : ouvrez `index.html` dans votre navigateur, ou lancez un petit serveur local :
+
 ```
 python3 -m http.server 8000
 ```
+
 puis rendez-vous sur `http://localhost:8000`.

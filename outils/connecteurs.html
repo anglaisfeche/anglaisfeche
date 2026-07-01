@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mots de liaison</title>
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  .connector-badge {
+    display: inline-block; font-family: 'Cinzel', serif; font-weight: 600;
+    font-size: 1.3rem; color: var(--emerald); border-bottom: 2px solid var(--gold);
+    padding-bottom: 0.15rem; margin-bottom: 0.2rem;
+  }
+  .meta-line { font-size: 0.85rem; color: var(--text-muted); margin: 0.2rem 0 1.1rem; }
+  .base-sentences { list-style: none; margin: 0 0 1.2rem; padding: 0; }
+  .base-sentences li {
+    background: var(--paper); border-left: 3px solid var(--gold);
+    padding: 0.55rem 0.8rem; margin-bottom: 0.5rem; font-size: 0.95rem;
+  }
+  textarea#answer {
+    width: 100%; min-height: 90px; margin-bottom: 0.9rem; resize: vertical;
+  }
+  .model-box {
+    display: none; background: var(--emerald-bg); border: 1px solid var(--emerald);
+    padding: 0.9rem 1rem; margin-top: 1rem; font-size: 0.95rem;
+  }
+  .model-box.show { display: block; }
+  .btn-row { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+  .filter-row { margin-bottom: 1.2rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .filter-row button { font-size: 0.72rem; padding: 0.45rem 0.8rem; }
+  .filter-row button.active { background: var(--emerald); border-color: var(--emerald); color: #fff; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <a href="../index.html" class="brand">✦ Outils pédagogiques</a>
+</header>
+
+<main>
+  <a class="back-link" href="../index.html">&larr; Retour à l'accueil</a>
+  <h1 class="page-title">Mots de liaison</h1>
+  <p class="page-subtitle">Réécrivez les phrases proposées en utilisant le connecteur donné pour complexifier votre expression, puis comparez avec une proposition de correction.</p>
+
+  <div class="tool-shell">
+    <div class="filter-row" id="filter-row"></div>
+    <div id="exercise-area"></div>
+    <div class="btn-row" style="margin-top:1rem;">
+      <button id="reveal-btn" class="secondary">Voir une proposition de réécriture</button>
+      <button id="next-btn">Phrase suivante</button>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">Outil pédagogique — Mots de liaison</footer>
+
+<script src="connecteurs-data.js"></script>
+<script>
+let currentCategory = 'all';
+let pool = [];
+let current = null;
+
+function categories() {
+  return ['all', ...new Set(CONNECTORS.map(c => c.category))];
+}
+
+function renderFilters() {
+  const row = document.getElementById('filter-row');
+  row.innerHTML = '';
+  categories().forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'secondary' + (cat === currentCategory ? ' active' : '');
+    btn.textContent = cat === 'all' ? 'Toutes les catégories' : cat;
+    btn.addEventListener('click', () => { currentCategory = cat; renderFilters(); buildPool(); pickNext(); });
+    row.appendChild(btn);
+  });
+}
+
+function buildPool() {
+  pool = CONNECTORS.filter(c => currentCategory === 'all' || c.category === currentCategory);
+}
+
+function pickNext() {
+  if (pool.length === 0) return;
+  current = pool[Math.floor(Math.random() * pool.length)];
+  renderExercise();
+}
+
+function renderExercise() {
+  const area = document.getElementById('exercise-area');
+  area.innerHTML = `
+    <span class="connector-badge">${current.connector}</span>
+    <p class="meta-line">${current.translation} — ${current.usage}</p>
+    <ul class="base-sentences">${current.base.map(s => `<li>${s}</li>`).join('')}</ul>
+    <label style="display:block; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:0.4rem;">Votre réécriture</label>
+    <textarea id="answer" placeholder="Réécrivez la ou les phrases en utilisant ${current.connector}..."></textarea>
+    <div class="model-box" id="model-box"><strong>Exemple de réécriture :</strong><br>${current.model}</div>
+  `;
+}
+
+document.getElementById('reveal-btn').addEventListener('click', () => {
+  document.getElementById('model-box').classList.add('show');
+});
+document.getElementById('next-btn').addEventListener('click', () => {
+  pickNext();
+});
+
+renderFilters();
+buildPool();
+pickNext();
+</script>
+
+</body>
+</html>
