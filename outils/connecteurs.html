@@ -17,35 +17,35 @@
     background: var(--paper); border-left: 3px solid var(--gold);
     padding: 0.55rem 0.8rem; margin-bottom: 0.5rem; font-size: 0.95rem;
   }
-  textarea#answer {
-    width: 100%; min-height: 90px; margin-bottom: 0.9rem; resize: vertical;
+  .zone-label { display:block; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:0.4rem; }
+  .build-zone {
+    min-height: 64px; background: var(--paper); border: 1px dashed var(--border);
+    padding: 0.7rem 0.8rem; margin-bottom: 0.9rem; display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: flex-start;
   }
+  .word-bank {
+    min-height: 54px; padding: 0.5rem 0; margin-bottom: 1rem;
+    display: flex; flex-wrap: wrap; gap: 0.4rem;
+  }
+  .word-tile {
+    all: unset; cursor: pointer; background: var(--paper-alt); border: 1px solid var(--gold);
+    padding: 0.4rem 0.75rem; font-size: 0.92rem; color: var(--ink);
+  }
+  .word-tile:hover { border-color: var(--emerald); }
+  .build-zone .word-tile { border-color: var(--border); background: #fff; }
+  .build-zone .word-tile.pos-ok { border-color: var(--emerald); background: var(--emerald-bg); }
+  .build-zone .word-tile.pos-bad { border-color: var(--burgundy); background: var(--burgundy-bg); }
   .model-box {
     display: none; background: var(--emerald-bg); border: 1px solid var(--emerald);
     padding: 0.9rem 1rem; margin-top: 1rem; font-size: 0.95rem;
   }
   .model-box.show { display: block; }
+  .result-line { font-size: 0.9rem; font-weight: 600; margin: 0.9rem 0 0; }
+  .result-line.ok { color: var(--emerald); }
+  .result-line.ko { color: var(--burgundy); }
   .btn-row { display: flex; gap: 0.6rem; flex-wrap: wrap; }
   .filter-row { margin-bottom: 1.2rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
   .filter-row button { font-size: 0.72rem; padding: 0.45rem 0.8rem; }
   .filter-row button.active { background: var(--emerald); border-color: var(--emerald); color: #fff; }
-  .check-list { list-style: none; margin: 0 0 1rem; padding: 0; }
-  .check-list li {
-    padding: 0.45rem 0; font-size: 0.9rem; display: flex; align-items: flex-start; gap: 0.55rem;
-    border-bottom: 1px solid var(--border);
-  }
-  .check-list li:last-child { border-bottom: none; }
-  .check-list li .icon { font-weight: 700; flex-shrink: 0; }
-  .check-list li.ok .icon { color: var(--emerald); }
-  .check-list li.ko .icon { color: var(--burgundy); }
-  .check-list li.ok { color: var(--ink); }
-  .check-list li.ko { color: var(--ink-soft); }
-  .check-results {
-    display: none; background: var(--paper); border: 1px solid var(--border);
-    padding: 0.9rem 1.1rem; margin-top: 1rem;
-  }
-  .check-results.show { display: block; }
-  .check-results .check-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 0.5rem; }
 </style>
 </head>
 <body>
@@ -57,17 +57,18 @@
 <main>
   <a class="back-link" href="../index.html">&larr; Retour à l'accueil</a>
   <h1 class="page-title">Mots de liaison</h1>
-  <p class="page-subtitle">Réécrivez les phrases proposées en utilisant le connecteur donné pour complexifier votre expression, puis comparez avec une proposition de correction.</p>
+  <p class="page-subtitle">Reconstituez la phrase dans le bon ordre en utilisant le connecteur donné, pour vous entraîner à complexifier votre expression.</p>
 
   <div class="tool-shell">
     <div class="filter-row" id="filter-row"></div>
     <div id="exercise-area"></div>
     <div class="btn-row" style="margin-top:1rem;">
       <button id="check-btn">Vérifier ma réponse</button>
-      <button id="reveal-btn" class="secondary">Voir une proposition de réécriture</button>
+      <button id="reset-btn" class="secondary">Recommencer</button>
+      <button id="reveal-btn" class="secondary">Voir la phrase</button>
       <button id="next-btn" class="secondary">Phrase suivante</button>
     </div>
-    <div class="check-results" id="check-results"></div>
+    <p class="result-line" id="result-line"></p>
   </div>
 </main>
 
@@ -78,6 +79,10 @@
 let currentCategory = 'all';
 let pool = [];
 let current = null;
+let tokens = [];      // mots de la phrase modèle, dans l'ordre original
+let bankOrder = [];   // indices mélangés, ordre d'affichage dans la banque de mots
+let built = [];       // indices dans l'ordre où l'élève les a cliqués
+let checked = false;
 
 function categories() {
   return ['all', ...new Set(CONNECTORS.map(c => c.category))];
@@ -99,9 +104,24 @@ function buildPool() {
   pool = CONNECTORS.filter(c => currentCategory === 'all' || c.category === currentCategory);
 }
 
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 function pickNext() {
   if (pool.length === 0) return;
   current = pool[Math.floor(Math.random() * pool.length)];
+  tokens = current.model.split(/\s+/);
+  let order;
+  do { order = shuffle(tokens.map((_, i) => i)); } while (tokens.length > 2 && order.every((v, i) => v === i));
+  bankOrder = order;
+  built = [];
+  checked = false;
   renderExercise();
 }
 
@@ -111,51 +131,75 @@ function renderExercise() {
     <span class="connector-badge">${current.connector}</span>
     <p class="meta-line">${current.translation} — ${current.usage}</p>
     <ul class="base-sentences">${current.base.map(s => `<li>${s}</li>`).join('')}</ul>
-    <label style="display:block; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:0.4rem;">Votre réécriture</label>
-    <textarea id="answer" placeholder="Réécrivez la ou les phrases en utilisant ${current.connector}..."></textarea>
-    <div class="model-box" id="model-box"><strong>Exemple de réécriture :</strong><br>${current.model}</div>
+    <label class="zone-label">Votre phrase (cliquez un mot ci-dessous pour le retirer)</label>
+    <div class="build-zone" id="build-zone"></div>
+    <label class="zone-label">Banque de mots (cliquez un mot pour l'ajouter à votre phrase)</label>
+    <div class="word-bank" id="word-bank"></div>
+    <div class="model-box" id="model-box"><strong>Phrase correcte :</strong><br>${current.model}</div>
   `;
-  document.getElementById('check-results').classList.remove('show');
+  document.getElementById('result-line').textContent = '';
+  document.getElementById('result-line').className = 'result-line';
+  renderZones();
 }
 
-// ------------------------------------------------------------
-// Vérifications automatiques (sans IA) : critères mécaniques
-// ------------------------------------------------------------
-function normalize(s) {
-  return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z\s]/g, ' ').replace(/\s+/g, ' ').trim();
+function renderZones() {
+  const bank = document.getElementById('word-bank');
+  const zone = document.getElementById('build-zone');
+  bank.innerHTML = '';
+  zone.innerHTML = '';
+
+  bankOrder.filter(i => !built.includes(i)).forEach(i => {
+    const btn = document.createElement('button');
+    btn.className = 'word-tile';
+    btn.textContent = tokens[i];
+    btn.addEventListener('click', () => {
+      if (checked) return;
+      built.push(i);
+      renderZones();
+    });
+    bank.appendChild(btn);
+  });
+
+  built.forEach((i, pos) => {
+    const btn = document.createElement('button');
+    btn.className = 'word-tile';
+    if (checked) btn.classList.add(pos === i ? 'pos-ok' : 'pos-bad');
+    btn.textContent = tokens[i];
+    btn.addEventListener('click', () => {
+      if (checked) return;
+      built.splice(pos, 1);
+      renderZones();
+    });
+    zone.appendChild(btn);
+  });
 }
 
-function connectorIsUsed(answer, connector) {
-  const normAnswer = normalize(answer);
-  const normConnector = normalize(connector);
-  if (normAnswer.includes(normConnector)) return true;
-  const words = normConnector.split(' ').filter(w => w.length > 2);
-  if (words.length === 0) return false;
-  const found = words.filter(w => normAnswer.includes(w));
-  return found.length >= Math.ceil(words.length / 2);
+function runCheck() {
+  checked = true;
+  const line = document.getElementById('result-line');
+  const complete = built.length === tokens.length;
+  const correct = complete && built.every((i, pos) => i === pos);
+  if (correct) {
+    line.textContent = 'Correct ! La phrase est bien formée.';
+    line.classList.add('ok');
+  } else if (!complete) {
+    line.textContent = `Pas encore terminé — il reste ${tokens.length - built.length} mot(s) dans la banque.`;
+    line.classList.add('ko');
+  } else {
+    const wrong = built.filter((i, pos) => i !== pos).length;
+    line.textContent = `Pas tout à fait — ${wrong} mot(s) mal placé(s).`;
+    line.classList.add('ko');
+  }
+  renderZones();
 }
 
-function runChecks() {
-  const answer = document.getElementById('answer').value.trim();
-  const checks = [];
-  checks.push({ ok: answer.length > 0, label: "Vous avez écrit une réponse" });
-  const wordCount = answer.split(/\s+/).filter(Boolean).length;
-  checks.push({ ok: answer.length > 0 && wordCount >= 5, label: `Votre phrase contient au moins 5 mots (actuellement ${wordCount})` });
-  checks.push({ ok: answer.length > 0 && connectorIsUsed(answer, current.connector), label: `Vous avez utilisé le connecteur « ${current.connector} »` });
-  checks.push({ ok: /^[A-ZÀ-Ý]/.test(answer), label: "Votre phrase commence par une majuscule" });
-  checks.push({ ok: /[.!?]$/.test(answer), label: "Votre phrase se termine par une ponctuation finale (. ! ?)" });
-  return checks;
-}
-
-function renderChecks(checks) {
-  const box = document.getElementById('check-results');
-  box.innerHTML = `<p class="check-title">Vérifications automatiques (pas de correction du sens — comparez avec le modèle pour ça)</p>
-    <ul class="check-list">${checks.map(c => `<li class="${c.ok ? 'ok' : 'ko'}"><span class="icon">${c.ok ? '✓' : '✗'}</span><span>${c.label}</span></li>`).join('')}</ul>`;
-  box.classList.add('show');
-}
-
-document.getElementById('check-btn').addEventListener('click', () => {
-  renderChecks(runChecks());
+document.getElementById('check-btn').addEventListener('click', runCheck);
+document.getElementById('reset-btn').addEventListener('click', () => {
+  built = [];
+  checked = false;
+  renderZones();
+  document.getElementById('result-line').textContent = '';
+  document.getElementById('result-line').className = 'result-line';
 });
 document.getElementById('reveal-btn').addEventListener('click', () => {
   document.getElementById('model-box').classList.add('show');

@@ -1,10 +1,10 @@
 // ============================================================
-// MOTS DE LIAISON — exercice de réécriture
+// MOTS DE LIAISON — exercice de remise dans l'ordre
 // ============================================================
-// Chaque item propose 1 ou 2 phrases simples à combiner/réécrire en
-// utilisant le connecteur indiqué. "model" est une réécriture possible,
-// affichée après la tentative de l'élève pour auto-évaluation
-// (il n'y a pas de correction automatique : la reformulation est libre).
+// Chaque item propose un connecteur et une phrase modèle ("model") qui
+// l'utilise correctement. L'exercice mélange les mots de "model" dans
+// une banque de mots ; l'élève doit cliquer les mots dans le bon ordre
+// pour reconstituer la phrase, puis vérifier sa réponse.
 // Pour ajouter un connecteur, copiez un bloc.
 // ============================================================
 
